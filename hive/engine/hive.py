@@ -1,32 +1,66 @@
-from enum import Enum, auto
+# Relative coordinates for the even rows:
+#
+#   /  \   /  \   /  \   /  \
+# |  --  | 0,-1 | 1,-1 |  --  |
+#   \  /   \  /   \  /   \  /   \
+#     | -1,0 | 0,0  | 1,0  |  --  |
+#   /  \   /  \   /  \   /  \   /
+# |  --  | 0,1  | 1,1  |  --  |
+#   \  /   \  /   \  /   \  /   \
+#     |  --  |  --  |  --  |  --
+#   /  \   /  \   /  \   /  \   /
+#
+# Relative coordinates for the odd rows:
+#
+#   /  \   /  \   /  \   /  \
+# |  --  |  --  |  --  |  --  |
+#   \  /   \  /   \  /   \  /   \
+#     |  --  |-1,-1 | 0,-1 |  --  |
+#   /  \   /  \   /  \   /  \   /
+# |  --  | -1,0 | 0,0  | 1,0  |
+#   \  /   \  /   \  /   \  /   \
+#     |  --  | -1,1 | 0,1  |  --
+#   /  \   /  \   /  \   /  \   /
+#
+# Relative odd rows coordinates can be obtained by subtracting value of 1
+# from the first coordinate of positions under and below of the center point
+# from the even rows relative coordinates.
+#
+# First piece starts on the odd row.
 
-import pieces
 
-COMPLETION_STR = "ok"
-GAME_TYPE = "Base"
-ENGINE_NAME = "EngineName"
-VERSION = "1.0"
+class HiveError(Exception):
+    pass
 
 
-def get_engine_info() -> str:
-    return f"id {ENGINE_NAME} v{VERSION}"
+class PositionNotEmptyError(HiveError):
+    pass
 
 
-class GameState(Enum):
-    NotStarted = auto()
-    InProgress = auto()
-    Draw = auto()
-    WhiteWins = auto()
-    BlackWin = auto()
+class PieceNotExistsError(HiveError):
+    pass
 
 
 class Hive:
-    __slots__ = "__pieces", "__pieces_str", "__pieces_positions"
+    __slots__ = (
+        "_pieces",
+        "_pieces_str",
+        "_pieces_positions",
+        "_even_row_relations",
+    )
 
     def __init__(self):
-        self.__pieces = []
-        self.__pieces_str = set()
-        self.__pieces_positions = set()
+        self._pieces = []
+        self._pieces_str = set()
+        self._pieces_positions = set()
+        self._even_row_relations = (
+            ("./", (1, -1)),
+            (".-", (1, 0)),
+            (".\\", (1, 1)),
+            ("/.", (0, 1)),
+            ("-.", (-1, 0)),
+            ("\.", (0, -1)),
+        )
 
     def add(self, piece_str: str):
         pass
