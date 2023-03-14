@@ -37,6 +37,14 @@ class PositionNotEmptyError(HiveError):
     pass
 
 
+class InvalidPositionError(HiveError):
+    pass
+
+
+class PieceAlreadyExistsError(HiveError):
+    pass
+
+
 class PieceNotExistsError(HiveError):
     pass
 
@@ -62,7 +70,7 @@ class Hive:
             ("\.", (0, -1)),
         )
 
-    def add(self, piece_str: str):
+    def add(self, move_str: str):
         pass
 
     def remove(self, piece_str: str):
@@ -71,5 +79,5 @@ class Hive:
     def is_in_hive(self, piece_str: str):
         pass
 
-    def is_position_empty(self, position: tuple[int, int, int]):
+    def is_position_empty(self, position_str: str):
         pass
