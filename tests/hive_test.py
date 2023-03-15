@@ -11,7 +11,7 @@ class TestHiveAdd(unittest.TestCase):
         piece_to_move = {}
         piece_to_move["bG1"] = "bG1"
         piece_to_move["wA1"] = "wA1 -bG1"
-        piece_to_move["wA2"] = "wA2 \bG1"
+        piece_to_move["wA2"] = "wA2 \\bG1"
         piece_to_move["wA3"] = "wA3 bG1/"
         piece_to_move["wG1"] = "wG1 bG1-"
         piece_to_move["wG2"] = "wG2 bG1\\"
@@ -22,7 +22,7 @@ class TestHiveAdd(unittest.TestCase):
 
             with self.subTest(piece=piece):
                 self.assertTrue(self.hive.is_in_hive(piece))
-                self.assertFalse(self.hive.is_position_empty(move.split()[-1]))
+                self.assertFalse(self.hive.is_position_empty(move))
 
     def test_add_next_to_not_existing_piece(self):
         with self.assertRaises(h.InvalidPositionError):

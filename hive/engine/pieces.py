@@ -4,29 +4,31 @@ from typing import NamedTuple
 
 PIECE_STR_LEN = 3
 
-PIECES = (
-    "wQ",
-    "bQ",
-    "wS1",
-    "bS1",
-    "wS2",
-    "bS2",
-    "wB1",
-    "bB1",
-    "wB2",
-    "bB2",
-    "wG1",
-    "bG1",
-    "wG2",
-    "bG2",
-    "wG3",
-    "bG3",
-    "wA1",
-    "bA1",
-    "wA2",
-    "bA2",
-    "wA3",
-    "bA3",
+_PIECES = frozenset(
+    [
+        "wQ",
+        "bQ",
+        "wS1",
+        "bS1",
+        "wS2",
+        "bS2",
+        "wB1",
+        "bB1",
+        "wB2",
+        "bB2",
+        "wG1",
+        "bG1",
+        "wG2",
+        "bG2",
+        "wG3",
+        "bG3",
+        "wA1",
+        "bA1",
+        "wA2",
+        "bA2",
+        "wA3",
+        "bA3",
+    ]
 )
 
 
@@ -52,7 +54,7 @@ class PieceInfo(NamedTuple):
 @dataclass
 class Piece:
     info: PieceInfo
-    coordinates: tuple[int, int, int]
+    position: tuple[int, int, int]
 
 
 def get_piece_info(piece_str: str) -> PieceInfo:
@@ -76,15 +78,4 @@ def get_turn_string(turn_num: int, piece_color: PieceColor) -> str:
 
 
 def is_piece_str_valid(piece_str: str) -> bool:
-    if len(piece_str) != PIECE_STR_LEN:
-        return False
-
-    color, ptype, num = piece_str
-    try:
-        color = PieceColor(color)
-        ptype = PieceType(ptype)
-        num = int(num)
-    except ValueError:
-        return False
-
-    return True
+    return piece_str in _PIECES
