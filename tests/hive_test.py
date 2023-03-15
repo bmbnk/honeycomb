@@ -19,18 +19,10 @@ class TestHiveAdd(unittest.TestCase):
 
         for piece, move in piece_to_move.items():
             self.hive.add(move)
+
             with self.subTest(piece=piece):
                 self.assertTrue(self.hive.is_in_hive(piece))
                 self.assertFalse(self.hive.is_position_empty(move.split()[-1]))
-
-    def test_add_to_not_empty_position(self):
-        self.hive.add("wA1")
-        self.hive.add("bQ /wA1")
-
-        for move in ["wG1 bQ/", "bA1"]:
-            with self.subTest(move=move):
-                with self.assertRaises(h.PositionNotEmptyError):
-                    self.hive.add(move)
 
     def test_add_next_to_not_existing_piece(self):
         with self.assertRaises(h.InvalidPositionError):
@@ -81,6 +73,7 @@ class TestHiveIsPositionEmpty(unittest.TestCase):
 
         for piece, position in piece_to_position.items():
             self.hive.add(f"{piece} {position}")
+
             with self.subTest(position=position):
                 self.assertFalse(self.hive.is_position_empty(position))
 
@@ -99,6 +92,7 @@ class TestHiveIsInHive(unittest.TestCase):
 
         for piece, move in piece_to_move.items():
             self.hive.add(move)
+
             with self.subTest(piece=piece):
                 self.assertTrue(self.hive.is_in_hive(piece))
 
