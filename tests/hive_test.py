@@ -48,14 +48,14 @@ class TestHiveRemove(unittest.TestCase):
     def test_if_removed(self):
         first_piece = "wA1"
         piece = "bG1"
-        piece_position = f"{first_piece}/"
+        move_str = f"{piece} {first_piece}/"
 
         self.hive.add(first_piece)
-        self.hive.add(f"{piece} {piece_position}")
+        self.hive.add(move_str)
 
         self.hive.remove(piece)
 
-        self.assertTrue(self.hive.is_position_empty(piece_position))
+        self.assertTrue(self.hive.is_position_empty(move_str))
         self.assertFalse(self.hive.is_in_hive(piece))
 
 
@@ -64,7 +64,14 @@ class TestHiveIsPositionEmpty(unittest.TestCase):
         self.hive = h.Hive()
 
     def test_when_empty(self):
-        self.assertTrue(self.hive.is_position_empty("wB1/"))
+        self.hive.add("bG1")
+        self.hive.add("wA1 -bG1")
+
+        self.assertTrue(self.hive.is_position_empty("wA2 bG1-"))
+
+    def test_when_invalid_position(self):
+        with self.assertRaises(h.InvalidPositionError):
+            self.hive.is_position_empty("wB1/")
 
     def test_when_not_empty(self):
         piece_to_position = {}
@@ -72,10 +79,11 @@ class TestHiveIsPositionEmpty(unittest.TestCase):
         piece_to_position["wA1"] = "-bG1"
 
         for piece, position in piece_to_position.items():
-            self.hive.add(f"{piece} {position}")
+            move_str = f"{piece} {position}"
+            self.hive.add(move_str)
 
             with self.subTest(position=position):
-                self.assertFalse(self.hive.is_position_empty(position))
+                self.assertFalse(self.hive.is_position_empty(move_str))
 
 
 class TestHiveIsInHive(unittest.TestCase):
