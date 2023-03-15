@@ -77,6 +77,8 @@ class _MoveStringsDecoder:
     @classmethod
     def get_ref_piece(cls, move_str: str) -> str:
         pos_str = cls._get_position_str(move_str)
+        if pos_str == move_str and any(sign in pos_str for sign in cls._relation_signs):
+            return ""
         return pos_str.strip("/-\\")
 
     @classmethod
@@ -138,20 +140,28 @@ class Hive:
 
         self._register_piece(move_str)
 
-    def remove(self, piece_str: str):
-        pass
+    def remove(self, piece_str: str) -> None:
+        if piece_str not in self._pieces_str:
+            raise PieceNotExistsError
+
+        for piece in self._pieces:
+            if pieces.get_piece_string(piece.info) == piece_str:
+                self._pieces_positions.remove(piece.position)
+                self._pieces_str.remove(piece_str)
+                self._pieces.remove(piece)
+                break
 
     def is_in_hive(self, piece_str: str) -> bool:
         return piece_str in self._pieces_str
 
     def is_position_empty(self, move_str: str) -> bool:
-        piece_str = self._move_str_decoder.get_ref_piece(move_str)
+        ref_piece_str = self._move_str_decoder.get_ref_piece(move_str)
+        ref_position = self._get_piece_position(ref_piece_str)
+        destination_2d = self._move_str_decoder.get_destination_position_2d(
+            ref_pos_2d=ref_position[:2], move_str=move_str
+        )
 
-        try:
-            self._get_piece_position(piece_str)
-        except InvalidPositionError:
-            return True
-        return False
+        return self._get_position_height(destination_2d) == 0
 
     def _register_piece(self, move_str: str) -> None:
         piece_str = self._move_str_decoder.get_piece_to_move(move_str)
