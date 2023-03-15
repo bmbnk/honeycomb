@@ -25,16 +25,20 @@ class TestHiveAdd(unittest.TestCase):
                 self.assertFalse(self.hive.is_position_empty(move))
 
     def test_add_next_to_not_existing_piece(self):
+        move_str = "wG1 bQ/"
+
         with self.assertRaises(h.InvalidPositionError):
-            self.hive.add("wG1 bQ/")
+            self.hive.add(move_str)
 
     def test_add_existing_piece(self):
-        white_piece = "wA1"
-        self.hive.add(white_piece)
-        self.hive.add(f"bA1 -{white_piece}")
+        first_piece = "wA1"
+        second_piece = "bA1"
+
+        self.hive.add(first_piece)
+        self.hive.add(f"{second_piece} -{first_piece}")
 
         with self.assertRaises(h.PieceAlreadyExistsError):
-            self.hive.add(f"{white_piece} -bA1")
+            self.hive.add(f"{first_piece} -{second_piece}")
 
 
 class TestHiveRemove(unittest.TestCase):
@@ -52,7 +56,6 @@ class TestHiveRemove(unittest.TestCase):
 
         self.hive.add(first_piece)
         self.hive.add(move_str)
-
         self.hive.remove(piece)
 
         self.assertTrue(self.hive.is_position_empty(move_str))
@@ -64,14 +67,19 @@ class TestHiveIsPositionEmpty(unittest.TestCase):
         self.hive = h.Hive()
 
     def test_when_empty(self):
-        self.hive.add("bG1")
-        self.hive.add("wA1 -bG1")
+        first_piece = "bG1"
+        second_piece = "wA1"
 
-        self.assertTrue(self.hive.is_position_empty("wA2 bG1-"))
+        self.hive.add(first_piece)
+        self.hive.add(f"{second_piece} -{first_piece}")
+
+        self.assertTrue(self.hive.is_position_empty(f"wA2 {first_piece}-"))
 
     def test_when_invalid_position(self):
+        move_str = "wG1 bQ/"
+
         with self.assertRaises(h.InvalidPositionError):
-            self.hive.is_position_empty("wB1/")
+            self.hive.is_position_empty(move_str)
 
     def test_when_not_empty(self):
         piece_to_position = {}
@@ -91,7 +99,9 @@ class TestHiveIsInHive(unittest.TestCase):
         self.hive = h.Hive()
 
     def test_when_not_in_hive(self):
-        self.assertFalse(self.hive.is_in_hive("wB1"))
+        piece_str = "wB1"
+
+        self.assertFalse(self.hive.is_in_hive(piece_str))
 
     def test_when_in_hive(self):
         piece_to_move = {}
