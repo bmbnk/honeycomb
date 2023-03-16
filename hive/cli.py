@@ -2,8 +2,20 @@ from hive import engine
 
 
 class App:
+    __slots__ = "_engine"
+
     def __init__(self) -> None:
-        self.engine = engine.Engine()
+        self._engine = engine.Engine()
 
     def run(self) -> None:
-        self.engine.start()
+        command = "info"
+        while command != "q":
+            result = self._engine.execute(command)
+            print(result)
+            command = input()
+
+        self.stop()
+
+    def stop(self) -> None:
+        print("Engine stopped.")
+        raise SystemExit
