@@ -1,3 +1,5 @@
+from typing import Callable
+
 from hive.engine.game import Game
 
 COMPLETION_STR = "ok"
@@ -15,39 +17,47 @@ class EngineError(Exception):
 
 class InvalidCommand(EngineError):
     def __init__(self, cmd):
-        self.message = f"Command : '{cmd}' is not valid."
+        self.message = f"Command: '{cmd}' is not valid."
+
+
+class InvalidCommandParameters(EngineError):
+    def __init__(self, arguments):
+        self.message = f"Invalid command arguments: '{arguments}'."
 
 
 class Engine:
     __slots__ = "_game", "_cmd_to_method", "_cmd_completion_str"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._game = Game()
         self._cmd_to_method = {
-            "info": "engine_info",
-            "newgame": "new_game",
-            "play": "play",
-            "pass": "pass_move",
-            "validmoves": "valid_moves",
-            "bestmove": "best_move",
-            "undo": "undo",
-            "options": "options",
+            "info": self.engine_info,
+            "newgame": self.new_game,
+            "play": self.play,
+            "pass": self.pass_move,
+            "validmoves": self.valid_moves,
+            "bestmove": self.best_move,
+            "undo": self.undo,
+            "options": self.options,
         }
         self._cmd_completion_str = "ok"
 
-    def execute(self, command):
-        return self._response(command)
+    def execute(self, inp) -> str:
+        return self._response(inp)
 
-    def engine_info(self):
+    def engine_info(self) -> str:
         return f"id {ENGINE_NAME} v{VERSION}"
 
     def new_game(self) -> str:
         self._game.new_game()
         return self._game.status
 
-    def play(self, move_str: str) -> str:
-        self._game.play(move_str)
-        return self._game.status
+    def play(self, params_str: str) -> str:
+        if 0 < len(params_str.split()) < 3:
+            self._game.play(params_str)
+            return self._game.status
+        else:
+            raise InvalidCommandParameters(params_str.split())
 
     def pass_move(self) -> str:
         self._game.pass_move()
@@ -66,19 +76,24 @@ class Engine:
     def options(self):
         pass
 
-    def _response(self, command) -> str:
+    def _response(self, inp) -> str:
         try:
-            result = self._cmd_result(command)
+            result = self._cmd_result(inp)
         except EngineError as e:
             result = str(e)
 
         return f"{result}\n{self._cmd_completion_str}"
 
-    def _cmd_result(self, command) -> str:
-        method_name = self._method_name(command)
-        return getattr(self, method_name)()
+    def _cmd_result(self, inp) -> str:
+        command, *params = inp.split()
+        method = self._method(command)
+        if params:
+            params_str = " ".join(params)
+            return method(params_str)
+        else:
+            return method()
 
-    def _method_name(self, command: str) -> str:
+    def _method(self, command: str) -> Callable[..., str]:
         if command not in self._cmd_to_method:
             raise InvalidCommand(command)
 
