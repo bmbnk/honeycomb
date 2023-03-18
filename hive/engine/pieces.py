@@ -54,7 +54,9 @@ class PieceInfo(NamedTuple):
 @dataclass
 class Piece:
     info: PieceInfo
-    position: tuple[int, int, int]
+    position: tuple[int, int]
+    piece_under: "Piece" | None
+    piece_above: "Piece" | None
 
 
 def get_piece_info(piece_str: str) -> PieceInfo:
