@@ -53,7 +53,7 @@ class Game:
             ]
         )
 
-    def new_game(self):
+    def new_game(self, game_info: str = "") -> None:
         self._state = GameState.NotStarted
         self._hive = Hive()
         self._moves = []
@@ -72,7 +72,7 @@ class Game:
     def best_move(self):
         pass
 
-    def undo(self):
+    def undo(self, to_undo: int) -> None:
         pass
 
     def _next_turn(self):

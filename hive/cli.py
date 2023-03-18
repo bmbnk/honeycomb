@@ -5,7 +5,7 @@ class App:
     __slots__ = "_engine"
 
     def __init__(self) -> None:
-        self._engine = engine.Engine()
+        self._engine = engine.EngineCommandExecutor()
 
     def run(self) -> None:
         command = "info"
