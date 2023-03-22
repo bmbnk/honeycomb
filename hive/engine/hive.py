@@ -145,7 +145,7 @@ class Hive:
         piece_str = MoveStringsDecoder.get_piece_to_move(move_str)
         ref_piece_str = MoveStringsDecoder.get_ref_piece(move_str)
 
-        if not self.is_in_hive(ref_piece_str):
+        if ref_piece_str not in self:
             raise PieceNotExistsError
         if not pieces.is_piece_str_valid(piece_str):
             raise NotValidPieceError
@@ -159,7 +159,7 @@ class Hive:
         Raises:
             PieceNotExistsError: If there is no piece in the hive with provided piece_str.
         """
-        if not self.is_in_hive(piece_str):
+        if piece_str not in self:
             raise PieceNotExistsError
 
         for piece in self._pieces:
@@ -167,7 +167,7 @@ class Hive:
                 self._unregister_piece(piece)
                 break
 
-    def is_in_hive(self, piece_str: str) -> bool:
+    def __contains__(self, piece_str: str) -> bool:
         return piece_str in self._pieces_str
 
     def is_position_empty(self, move_str: str) -> bool:

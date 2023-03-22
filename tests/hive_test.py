@@ -21,7 +21,7 @@ class TestHiveAdd(unittest.TestCase):
             self.hive.add(move)
 
             with self.subTest(piece=piece):
-                self.assertTrue(self.hive.is_in_hive(piece))
+                self.assertTrue(piece in self.hive)
                 self.assertFalse(self.hive.is_position_empty(move))
 
     def test_add_next_to_not_existing_piece(self):
@@ -59,7 +59,7 @@ class TestHiveRemove(unittest.TestCase):
         self.hive.remove(piece)
 
         self.assertTrue(self.hive.is_position_empty(move_str))
-        self.assertFalse(self.hive.is_in_hive(piece))
+        self.assertFalse(piece in self.hive)
 
 
 class TestHiveIsPositionEmpty(unittest.TestCase):
@@ -101,7 +101,7 @@ class TestHiveIsInHive(unittest.TestCase):
     def test_when_not_in_hive(self):
         piece_str = "wB1"
 
-        self.assertFalse(self.hive.is_in_hive(piece_str))
+        self.assertFalse(piece_str in self.hive)
 
     def test_when_in_hive(self):
         piece_to_move = {}
@@ -112,7 +112,7 @@ class TestHiveIsInHive(unittest.TestCase):
             self.hive.add(move)
 
             with self.subTest(piece=piece):
-                self.assertTrue(self.hive.is_in_hive(piece))
+                self.assertTrue(piece in self.hive)
 
 
 if __name__ == "__main__":
