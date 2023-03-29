@@ -1,11 +1,11 @@
 # Relative coordinates for the even rows:
 #
 #   /  \   /  \   /  \   /  \
-# |  --  | 0,-1 | 1,-1 |  --  |
+# |  --  | -1,0 | -1,1 |  --  |
 #   \  /   \  /   \  /   \  /   \
-#     | -1,0 | 0,0  | 1,0  |  --  |
+#     | 0,-1 | 0,0  | 0,1  |  --  |
 #   /  \   /  \   /  \   /  \   /
-# |  --  | 0,1  | 1,1  |  --  |
+# |  --  | 1,0  | 1,1  |  --  |
 #   \  /   \  /   \  /   \  /   \
 #     |  --  |  --  |  --  |  --
 #   /  \   /  \   /  \   /  \   /
@@ -15,11 +15,11 @@
 #   /  \   /  \   /  \   /  \
 # |  --  |  --  |  --  |  --  |
 #   \  /   \  /   \  /   \  /   \
-#     |  --  |-1,-1 | 0,-1 |  --  |
+#     |  --  |-1,-1 | -1,0 |  --  |
 #   /  \   /  \   /  \   /  \   /
-# |  --  | -1,0 | 0,0  | 1,0  |
+# |  --  | 0,-1 | 0,0  | 0,1  |
 #   \  /   \  /   \  /   \  /   \
-#     |  --  | -1,1 | 0,1  |  --
+#     |  --  | 1,-1 | 1,0  |  --
 #   /  \   /  \   /  \   /  \   /
 #
 # Relative odd rows coordinates can be obtained by subtracting value of 1
@@ -59,26 +59,35 @@ def sum_tuple_elem_wise(a: tuple, b: tuple):
 
 class PositionsResolver:
     _even_row_relations_to_offset = {
-        "./": (1, -1),
-        ".-": (1, 0),
+        "./": (-1, 1),
+        ".-": (0, 1),
         ".\\": (1, 1),
-        "/.": (0, 1),
-        "-.": (-1, 0),
-        "\\.": (0, -1),
+        "/.": (1, 0),
+        "-.": (0, -1),
+        "\\.": (-1, 0),
         ".": (0, 0),
     }
-    _odd_row_offset = (-1, 0)
+
+    _odd_row_relations_to_offset = {
+        "./": (-1, 0),
+        ".-": (0, 1),
+        ".\\": (1, 0),
+        "/.": (1, -1),
+        "-.": (0, -1),
+        "\\.": (-1, -1),
+        ".": (0, 0),
+    }
 
     @classmethod
     def get_destination_position(
         cls, ref_pos: tuple[int, int], move_str: str
     ) -> tuple[int, int]:
         relation = cls._get_relation(move_str)
-        position_offset = cls._get_position_offset(ref_pos, relation)
+        position_offset = cls.get_position_offset(ref_pos, relation)
         return sum_tuple_elem_wise(ref_pos, position_offset)
 
     @classmethod
-    def _get_position_offset(
+    def get_position_offset(
         cls, position: tuple[int, int], relation: str
     ) -> tuple[int, int]:
         position_offset = cls._even_row_relations_to_offset[relation]
