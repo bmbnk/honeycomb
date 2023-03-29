@@ -3,16 +3,16 @@ from enum import Enum, auto
 from hive.engine import pieces
 from hive.engine.hive import Hive
 
-GAME_TYPE = "Base"
-STARTING_COLOR = pieces.PieceColor.WHITE
+_GAME_TYPE = "Base"
+_STARTING_COLOR = pieces.PieceColor.WHITE
 
 
 class GameState(Enum):
-    NotStarted = auto()
-    InProgress = auto()
-    Draw = auto()
-    WhiteWins = auto()
     BlackWin = auto()
+    Draw = auto()
+    InProgress = auto()
+    NotStarted = auto()
+    WhiteWins = auto()
 
 
 # class CommandValidator:
@@ -36,7 +36,7 @@ class GameState(Enum):
 
 
 class Game:
-    __slots__ = "_state", "_hive", "_moves", "_turn_color", "_turn_num"
+    __slots__ = "_hive", "_moves", "_state", "_turn_color", "_turn_num"
 
     def __init__(self):
         self.new_game()
@@ -45,33 +45,33 @@ class Game:
     def status(self) -> str:
         return ";".join(
             [
-                GAME_TYPE,
+                _GAME_TYPE,
                 self._state.name,
                 pieces.get_turn_string(self._turn_num, self._turn_color),
                 *self._moves,
             ]
         )
 
+    def best_move(self):
+        pass
+
     def new_game(self, game_info: str = "") -> None:
         self._state = GameState.NotStarted
         self._hive = Hive()
         self._moves = []
-        self._turn_color = STARTING_COLOR
+        self._turn_color = _STARTING_COLOR
         self._turn_num = 1
-
-    def play(self, move_str: str):
-        pass
 
     def pass_move(self):
         pass
 
-    def valid_moves(self):
-        pass
-
-    def best_move(self):
+    def play(self, piece_str: str, position: tuple[int, int]):
         pass
 
     def undo(self, to_undo: int) -> None:
+        pass
+
+    def valid_moves(self):
         pass
 
     def _next_turn(self):
@@ -82,5 +82,5 @@ class Game:
         else:
             self._turn_color = pieces.PieceColor.WHITE
 
-        if self._turn_color == STARTING_COLOR:
+        if self._turn_color == _STARTING_COLOR:
             self._turn_num += 1
