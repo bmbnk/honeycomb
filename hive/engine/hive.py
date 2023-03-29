@@ -26,17 +26,22 @@
 # from the first coordinate of positions under and below of the center point
 # from the even rows relative coordinates.
 #
-# First piece starts on the odd row.
+# First piece starts on the odd row with position (0, 0).
 
 
-from hive.engine import pieces
+from hive.engine import pieces as p
+from hive.engine import gamestrings as gs
 
 
 class HiveError(Exception):
     pass
 
 
-class InvalidPositionError(HiveError):
+class NotEmptyPositionError(HiveError):
+    pass
+
+
+class NotValidPieceError(HiveError):
     pass
 
 
@@ -44,11 +49,7 @@ class PieceAlreadyExistsError(HiveError):
     pass
 
 
-class PieceNotExistsError(HiveError):
-    pass
-
-
-class NotValidPieceError(HiveError):
+class PieceNotInGameError(HiveError):
     pass
 
 
@@ -89,9 +90,9 @@ class PositionsResolver:
 
     @classmethod
     def _get_relation(cls, move_str: str) -> str:
-        position_str = MoveStringsDecoder._get_position_str(move_str)
+        position_str = gs.MoveStringsDecoder._get_position_str(move_str)
 
-        for sign in MoveStringsDecoder.relation_signs:
+        for sign in gs.MoveStringsDecoder.relation_signs:
             if position_str.startswith(sign):
                 return f"{sign}."
             elif position_str.endswith(sign):
@@ -100,150 +101,120 @@ class PositionsResolver:
         return "."
 
 
-class MoveStringsDecoder:
-    _relation_signs = frozenset({"/", "-", "\\"})
-
-    @property
-    @classmethod
-    def relation_signs(cls) -> frozenset:
-        return cls._relation_signs
-
-    @classmethod
-    def get_piece_to_move(cls, move_str: str) -> str:
-        return move_str.split()[0]
-
-    @classmethod
-    def get_ref_piece(cls, move_str: str) -> str:
-        pos_str = cls._get_position_str(move_str)
-        if pos_str == move_str and any(sign in pos_str for sign in cls._relation_signs):
-            return ""
-        return pos_str.strip("".join(cls._relation_signs))
-
-    @classmethod
-    def _get_position_str(cls, move_str: str) -> str:
-        str_parts = move_str.split()
-
-        if len(str_parts) == 1:
-            return move_str
-        return str_parts[1]
-
-
 class Hive:
-    __slots__ = ("_pieces", "_pieces_str", "_pieces_positions")
+    __slots__ = "_pieces"
 
     def __init__(self):
-        self._pieces = []
-        self._pieces_str = set()
-        self._pieces_positions = set()
+        self._pieces = {}
 
-    def add(self, move_str: str) -> None:
+        for color in p.PieceColor:
+            self._pieces[color] = {
+                "hand": {
+                    "str": set(p.pieces_str(color)),
+                },
+                "board": {
+                    "instances": set(),
+                    "positions": set(),
+                    "str": set(),
+                },
+            }
+
+    def add(self, piece_str: str, position: tuple[int, int] = (0, 0)) -> None:
         """
         Raises:
-            NotValidPieceError: If piece to add from move_str is not a valid piece.
-            PieceAlreadyExistsError: If piece to add from move_str is already in the hive.
+            PieceAlreadyExistsError: If piece_str is already in the hive.
+            NotEmptyPositionError: If there is already a piece on position
         """
-        piece_str = MoveStringsDecoder.get_piece_to_move(move_str)
-        ref_piece_str = MoveStringsDecoder.get_ref_piece(move_str)
+        assert p.is_piece_str_valid(piece_str)
 
-        if ref_piece_str not in self:
-            raise PieceNotExistsError
-        if not pieces.is_piece_str_valid(piece_str):
-            raise NotValidPieceError
-        if piece_str in self._pieces_str:
+        if piece_str in self.pieces_on_board_str(p.get_piece_color(piece_str)):
             raise PieceAlreadyExistsError
+        if position in self.positions(p.PieceColor.BLACK) or position in self.positions(
+            p.PieceColor.WHITE
+        ):
+            raise NotEmptyPositionError
 
-        self._register_piece(move_str)
+        self._register_piece(piece_str, position)
 
-    def remove(self, piece_str: str) -> None:
+    def is_position_empty(self, position: tuple[int, int]) -> bool:
+        return position in self.positions(
+            p.PieceColor.BLACK
+        ) or position in self.positions(p.PieceColor.WHITE)
+
+    def positions(self, color: p.PieceColor) -> set[tuple[int, int]]:
+        pieces = self._pieces[color]["board"]["positions"]
+        return pieces
+
+    def pieces_on_board_str(self, color: p.PieceColor) -> set[str]:
+        pieces_str = self._pieces[color]["board"]["str"]
+        return pieces_str
+
+    def pieces_on_board(self, color: p.PieceColor) -> set[p.Piece]:
+        pieces = self._pieces[color]["board"]["instances"]
+        return pieces
+
+    def pieces_in_hand_str(self, color: p.PieceColor) -> set[str]:
+        pieces_str = self._pieces[color]["hand"]["str"]
+        return pieces_str
+
+    def move(self, piece_str: str, position: tuple[int, int]) -> None:
         """
         Raises:
-            PieceNotExistsError: If there is no piece in the hive with provided piece_str.
+            PieceNotInGameError: If there is no piece in the hive with provided piece_str.
         """
-        if piece_str not in self:
-            raise PieceNotExistsError
+        color = p.get_piece_color(piece_str)
 
-        for piece in self._pieces:
-            if pieces.get_piece_string(piece.info) == piece_str:
-                self._unregister_piece(piece)
+        if piece_str not in self.pieces_on_board_str(color):
+            raise PieceNotInGameError
+
+        for piece in self.pieces_on_board(color):
+            if p.get_piece_string(piece.info) == piece_str:
+                self._transfer_piece(piece, position)
                 break
 
-    def __contains__(self, piece_str: str) -> bool:
-        return piece_str in self._pieces_str
-
-    def is_position_empty(self, move_str: str) -> bool:
-        ref_piece_str = MoveStringsDecoder.get_ref_piece(move_str)
-        ref_position = self._get_piece_position(ref_piece_str)
-        destination = PositionsResolver.get_destination_position(
-            ref_pos=ref_position, move_str=move_str
+    def _get_top_piece_on_position(self, position: tuple[int, int]) -> p.Piece | None:
+        assert position in (
+            self.positions(p.PieceColor.BLACK) | self.positions(p.PieceColor.WHITE)
         )
 
-        return destination in self._pieces_positions
+        pieces = self.pieces_on_board(p.PieceColor.BLACK) | self.pieces_on_board(
+            p.PieceColor.WHITE
+        )
 
-    def _unregister_piece(self, piece: pieces.Piece) -> None:
+        for piece in pieces:
+            if piece.position == position:
+                while piece.piece_above is not None:
+                    piece = piece.piece_above
+                return piece
+
+    def _register_piece(self, piece_str: str, position: tuple[int, int]) -> None:
+        new_piece = p.Piece(
+            info=p.get_piece_info(piece_str),
+            position=position,
+            piece_under=None,
+            piece_above=None,
+        )
+
+        self.pieces_in_hand_str(new_piece.info.color).remove(piece_str)
+
+        self.pieces_on_board(new_piece.info.color).add(new_piece)
+        self.pieces_on_board_str(new_piece.info.color).add(piece_str)
+        self.positions(new_piece.info.color).add(position)
+
+    def _transfer_piece(self, piece: p.Piece, position: tuple[int, int]) -> None:
         if piece.piece_under is not None:
             piece.piece_under.piece_above = piece.piece_above
 
         if piece.piece_above is not None:
             piece.piece_above.piece_under = piece.piece_under
 
-        self._pieces.remove(piece)
-        self._pieces_str.remove(pieces.get_piece_string(piece.info))
-        self._pieces_positions.remove(piece.position)
+        self.positions(piece.info.color).remove(piece.position)
 
-    def _register_piece(self, move_str: str) -> None:
-        piece_str = MoveStringsDecoder.get_piece_to_move(move_str)
-        position = self._get_adding_position(move_str)
-
-        new_piece = pieces.Piece(
-            info=pieces.get_piece_info(piece_str),
-            position=position,
-            piece_under=None,
-            piece_above=None,
-        )
-
-        if not self.is_position_empty(move_str):
+        if not self.is_position_empty(position):
             top_piece_on_position = self._get_top_piece_on_position(position)
+            assert top_piece_on_position is not None
+            piece.piece_under = top_piece_on_position
+            top_piece_on_position.piece_above = piece
 
-            new_piece.piece_under = top_piece_on_position
-            top_piece_on_position.piece_above = new_piece
-
-        self._pieces.append(new_piece)
-        self._pieces_str.add(piece_str)
-        self._pieces_positions.add(position)
-
-    def _get_adding_position(self, move_str: str) -> tuple[int, int]:
-        ref_piece_str = MoveStringsDecoder.get_ref_piece(move_str)
-        piece_str = MoveStringsDecoder.get_piece_to_move(move_str)
-
-        if not self._pieces and ref_piece_str == piece_str:
-            return (0, 0)
-
-        ref_piece_position = self._get_piece_position(ref_piece_str)
-        position = PositionsResolver.get_destination_position(
-            ref_piece_position, move_str
-        )
-        return position
-
-    def _get_piece_position(self, piece_str: str) -> tuple[int, int]:
-        """
-        Raises:
-            PieceNotExistsError: If there is no piece in the hive with provided piece_str.
-        """
-        for piece in self._pieces:
-            if pieces.get_piece_string(piece.info) == piece_str:
-                return piece.position
-
-        raise PieceNotExistsError
-
-    def _get_top_piece_on_position(self, position: tuple[int, int]) -> pieces.Piece:
-        """
-        Raises:
-            InvalidPositionError: If there is no piece on the position.
-        """
-        for piece in self._pieces:
-            if piece.position == position:
-                while piece.piece_above is not None:
-                    piece = piece.piece_above
-                return piece
-
-        raise InvalidPositionError
+        piece.position = position
+        self.positions(piece.info.color).add(piece.position)

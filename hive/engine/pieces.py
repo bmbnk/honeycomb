@@ -2,39 +2,48 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import NamedTuple
 
-PIECE_STR_LEN = 3
-
-_PIECES = frozenset(
-    [
-        "wQ",
-        "bQ",
-        "wS1",
-        "bS1",
-        "wS2",
-        "bS2",
-        "wB1",
-        "bB1",
-        "wB2",
-        "bB2",
-        "wG1",
-        "bG1",
-        "wG2",
-        "bG2",
-        "wG3",
-        "bG3",
-        "wA1",
-        "bA1",
-        "wA2",
-        "bA2",
-        "wA3",
-        "bA3",
-    ]
-)
-
 
 class PieceColor(Enum):
     BLACK = "b"
     WHITE = "w"
+
+
+def pieces_str(color: PieceColor):
+    return {
+        PieceColor.BLACK: frozenset(
+            (
+                "bA1",
+                "bA2",
+                "bA3",
+                "bB1",
+                "bB2",
+                "bG1",
+                "bG2",
+                "bG3",
+                "bQ",
+                "bS1",
+                "bS2",
+            )
+        ),
+        PieceColor.WHITE: frozenset(
+            (
+                "wA1",
+                "wA2",
+                "wA3",
+                "wB1",
+                "wB2",
+                "wG1",
+                "wG2",
+                "wG3",
+                "wQ",
+                "wS1",
+                "wS2",
+            )
+        ),
+    }[color]
+
+
+PIECE_STR_LEN = 3
 
 
 class PieceType(Enum):
@@ -55,8 +64,8 @@ class PieceInfo(NamedTuple):
 class Piece:
     info: PieceInfo
     position: tuple[int, int]
-    piece_under: "Piece" | None
-    piece_above: "Piece" | None
+    piece_under: "Piece | None"
+    piece_above: "Piece | None"
 
 
 def get_piece_info(piece_str: str) -> PieceInfo:
@@ -69,10 +78,18 @@ def get_piece_info(piece_str: str) -> PieceInfo:
     return PieceInfo(color=color, ptype=ptype, num=num)
 
 
+def get_piece_color(piece_str: str) -> PieceColor:
+    return PieceColor(piece_str[0])
+
+
 def get_piece_string(piece_info: PieceInfo) -> str:
     return "".join(
         [piece_info.color.value, piece_info.ptype.value, str(piece_info.num)]
     )
+
+
+def get_piece_type(piece_str: str) -> PieceType:
+    return PieceType(piece_str[0])
 
 
 def get_turn_string(turn_num: int, piece_color: PieceColor) -> str:
@@ -80,4 +97,6 @@ def get_turn_string(turn_num: int, piece_color: PieceColor) -> str:
 
 
 def is_piece_str_valid(piece_str: str) -> bool:
-    return piece_str in _PIECES
+    return piece_str in pieces_str(PieceColor.BLACK) or piece_str in pieces_str(
+        PieceColor.WHITE
+    )
