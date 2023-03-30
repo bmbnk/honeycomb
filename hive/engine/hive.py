@@ -58,47 +58,54 @@ def sum_tuple_elem_wise(a: tuple, b: tuple):
 
 
 class PositionsResolver:
-    _even_row_relations_to_offset = {
-        "./": (-1, 1),
-        ".-": (0, 1),
-        ".\\": (1, 1),
-        "/.": (1, 0),
-        "-.": (0, -1),
-        "\\.": (-1, 0),
-        ".": (0, 0),
+    _relation_to_move_offset = {
+        "even": {
+            "./": (-1, 1),
+            ".-": (0, 1),
+            ".\\": (1, 1),
+            "/.": (1, 0),
+            "-.": (0, -1),
+            "\\.": (-1, 0),
+        },
+        "odd": {
+            "./": (-1, 0),
+            ".-": (0, 1),
+            ".\\": (1, 0),
+            "/.": (1, -1),
+            "-.": (0, -1),
+            "\\.": (-1, -1),
+        },
     }
-
-    _odd_row_relations_to_offset = {
-        "./": (-1, 0),
-        ".-": (0, 1),
-        ".\\": (1, 0),
-        "/.": (1, -1),
-        "-.": (0, -1),
-        "\\.": (-1, -1),
-        ".": (0, 0),
-    }
+    _same_relation = "."
 
     @classmethod
-    def get_destination_position(
+    def move_offsets(cls, position: tuple[int, int]):
+        return set(
+            cls._relation_to_move_offset[
+                "odd" if position[1] % 2 == 0 else "even"
+            ].values()
+        )
+
+    @classmethod
+    def destination_position(
         cls, ref_pos: tuple[int, int], move_str: str
     ) -> tuple[int, int]:
-        relation = cls._get_relation(move_str)
-        position_offset = cls.get_position_offset(ref_pos, relation)
-        return sum_tuple_elem_wise(ref_pos, position_offset)
+        relation = cls._relation(move_str)
+        if relation == cls._same_relation:
+            return ref_pos
+        offset = cls.position_offset(ref_pos, relation)
+        return sum_tuple_elem_wise(ref_pos, offset)
 
     @classmethod
-    def get_position_offset(
+    def position_offset(
         cls, position: tuple[int, int], relation: str
     ) -> tuple[int, int]:
-        position_offset = cls._even_row_relations_to_offset[relation]
-
-        if position[1] % 2 == 0 and position_offset[1] != 0:
-            position_offset += cls._odd_row_offset
-
-        return position_offset
+        return cls._relation_to_move_offset["odd" if position[1] % 2 == 0 else "even"][
+            relation
+        ]
 
     @classmethod
-    def _get_relation(cls, move_str: str) -> str:
+    def _relation(cls, move_str: str) -> str:
         position_str = gs.MoveStringsDecoder._get_position_str(move_str)
 
         for sign in gs.MoveStringsDecoder.relation_signs:
@@ -107,7 +114,7 @@ class PositionsResolver:
             elif position_str.endswith(sign):
                 return f".{sign}"
 
-        return "."
+        return cls._same_relation
 
 
 class Hive:
