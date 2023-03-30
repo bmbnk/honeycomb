@@ -12,15 +12,15 @@ def adding_positions(hive: h.Hive, color: p.PieceColor) -> set[tuple[int, int]]:
         if not opponent_pos:
             return {(0, 0)}
 
-        return positions_around(opponent_pos.pop())
+        return set(positions_around_clockwise(opponent_pos.pop()))
 
     positions_around_player_positions = set()
     for pos in player_pos:
-        positions_around_player_positions |= positions_around(pos)
+        positions_around_player_positions |= set(positions_around_clockwise(pos))
 
     positions_around_opponent_positions = set()
     for pos in opponent_pos:
-        positions_around_opponent_positions |= positions_around(pos)
+        positions_around_opponent_positions |= set(positions_around_clockwise(pos))
 
     return (
         positions_around_player_positions
@@ -29,8 +29,89 @@ def adding_positions(hive: h.Hive, color: p.PieceColor) -> set[tuple[int, int]]:
     )
 
 
-def positions_around(position: tuple[int, int]) -> set[tuple[int, int]]:
-    return set(
-        h.sum_tuple_elem_wise(position, offset)
-        for offset in h.PositionsResolver.move_offsets(position)
+def move_positions(position: tuple[int, int], hive: h.Hive, piece_type: p.PieceType):
+    return PIECE_TO_MOVE[piece_type](position, hive.positions())
+
+
+def ant_move_positions(
+    position: tuple[int, int],
+    occupied: set[tuple[int, int]],
+    explored: set[tuple[int, int]] = set(),
+    valid: set[tuple[int, int]] = set(),
+):
+    explored.add(position)
+
+    next_neighbours = positions_next_neighbours(position, occupied)
+    to_explore = next_neighbours - explored
+
+    if not to_explore:
+        return valid
+
+    next_position = to_explore.pop()
+    valid.add(next_position)
+
+    # TODO: Make this method yield
+
+    return ant_move_positions(next_position, occupied, explored, valid)
+
+
+def bee_move_positions(position: tuple[int, int], occupied: set[tuple[int, int]]):
+    ...
+
+
+def beetle_move_positions(position: tuple[int, int], occupied: set[tuple[int, int]]):
+    ...
+
+
+def grasshopper_move_positions(
+    position: tuple[int, int], occupied: set[tuple[int, int]]
+):
+    ...
+
+
+def spider_move_positions(position: tuple[int, int], occupied: set[tuple[int, int]]):
+    ...
+
+
+def positions_around_clockwise(position: tuple[int, int]) -> list[tuple[int, int]]:
+    return list(
+        (position[0] + offset[0], position[1] + offset[1])
+        for offset in h.PositionsResolver.move_offsets_clockwise(position)
     )
+
+
+def positions_next_neighbours(
+    position: tuple[int, int], occupied: set[tuple[int, int]]
+) -> set[tuple[int, int]]:
+    """
+    Returns set of position around given position that are:
+    - not occupied,
+    - next to neighbour position
+    - not violating freedom of move rule
+    """
+    around_clockwise = positions_around_clockwise(position)
+    next_neighbour_pos = set()
+
+    prev_around = around_clockwise[0]
+    for i in range(1, len(around_clockwise) + 1):
+        curr_around = around_clockwise[i % len(around_clockwise)]
+
+        if curr_around not in occupied:
+            next_around = around_clockwise[i + 1 % len(around_clockwise)]
+            if (prev_around in occupied and next_around not in occupied) or (
+                prev_around not in occupied and next_around in occupied
+            ):
+                next_neighbour_pos.add(curr_around)
+
+        prev_around = curr_around
+
+    return next_neighbour_pos
+
+
+PIECE_TO_MOVE = {
+    p.PieceType.ANT: ant_move_positions,
+    p.PieceType.BEE: bee_move_positions,
+    p.PieceType.BEETLE: beetle_move_positions,
+    p.PieceType.GRASSHOPPER: grasshopper_move_positions,
+    p.PieceType.SPIDER: spider_move_positions,
+}
