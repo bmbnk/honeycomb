@@ -40,15 +40,36 @@ def ant_move_positions(
     explored: set[tuple[int, int]] = set(),
 ) -> Generator:
     explored.add(position)
-    next_neighbours = positions_next_neighbours(position, occupied)
-    to_explore = (pos for pos in next_neighbours if pos not in explored)
-    next_position = next(to_explore)
-    yield next_position
-    yield from ant_move_positions(next_position, occupied, explored)
+
+    next_steps = bee_move_positions(position, occupied)
+    to_explore = (pos for pos in next_steps if pos not in explored)
+    next_position = None
+
+    for pos in to_explore:
+        yield pos
+        next_position = pos
+
+    if next_position is not None:
+        yield from ant_move_positions(next_position, occupied, explored)
 
 
-def bee_move_positions(position: tuple[int, int], occupied: set[tuple[int, int]]):
-    ...
+def bee_move_positions(
+    position: tuple[int, int], occupied: set[tuple[int, int]]
+) -> Generator:
+    around_clockwise = positions_around_clockwise(position)
+
+    prev_around = around_clockwise[-2]
+    for i in range(len(around_clockwise)):
+        curr_around = around_clockwise[i - 1]
+
+        if curr_around not in occupied:
+            next_around = around_clockwise[i]
+            if (prev_around in occupied and next_around not in occupied) or (
+                prev_around not in occupied and next_around in occupied
+            ):
+                yield curr_around
+
+        prev_around = curr_around
 
 
 def beetle_move_positions(position: tuple[int, int], occupied: set[tuple[int, int]]):
@@ -61,8 +82,22 @@ def grasshopper_move_positions(
     ...
 
 
-def spider_move_positions(position: tuple[int, int], occupied: set[tuple[int, int]]):
-    ...
+def spider_move_positions(
+    position: tuple[int, int],
+    occupied: set[tuple[int, int]],
+    explored: set = set(),
+    step_counter: int = 0,
+) -> Generator:
+    explored.add(position)
+
+    next_steps = bee_move_positions(position, occupied)
+    to_explore = (pos for pos in next_steps if pos not in explored)
+
+    for pos in to_explore:
+        if step_counter < 2:
+            yield from spider_move_positions(pos, occupied, explored, step_counter + 1)
+        else:
+            yield pos
 
 
 def positions_around_clockwise(position: tuple[int, int]) -> list[tuple[int, int]]:
@@ -70,31 +105,6 @@ def positions_around_clockwise(position: tuple[int, int]) -> list[tuple[int, int
         (position[0] + offset[0], position[1] + offset[1])
         for offset in h.PositionsResolver.move_offsets_clockwise(position)
     )
-
-
-def positions_next_neighbours(
-    position: tuple[int, int], occupied: set[tuple[int, int]]
-) -> Generator:
-    """
-    Generates position around given position that are:
-    - not occupied,
-    - next to neighbour position
-    - not violating freedom of move rule
-    """
-    around_clockwise = positions_around_clockwise(position)
-
-    prev_around = around_clockwise[0]
-    for i in range(1, len(around_clockwise) + 1):
-        curr_around = around_clockwise[i % len(around_clockwise)]
-
-        if curr_around not in occupied:
-            next_around = around_clockwise[i + 1 % len(around_clockwise)]
-            if (prev_around in occupied and next_around not in occupied) or (
-                prev_around not in occupied and next_around in occupied
-            ):
-                yield curr_around
-
-        prev_around = curr_around
 
 
 PIECE_TO_MOVE = {
