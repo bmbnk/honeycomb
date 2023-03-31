@@ -1,3 +1,4 @@
+from typing import Generator
 from hive.engine import hive as h
 from hive.engine import pieces as p
 
@@ -37,22 +38,13 @@ def ant_move_positions(
     position: tuple[int, int],
     occupied: set[tuple[int, int]],
     explored: set[tuple[int, int]] = set(),
-    valid: set[tuple[int, int]] = set(),
-):
+) -> Generator:
     explored.add(position)
-
     next_neighbours = positions_next_neighbours(position, occupied)
-    to_explore = next_neighbours - explored
-
-    if not to_explore:
-        return valid
-
-    next_position = to_explore.pop()
-    valid.add(next_position)
-
-    # TODO: Make this method yield
-
-    return ant_move_positions(next_position, occupied, explored, valid)
+    to_explore = (pos for pos in next_neighbours if pos not in explored)
+    next_position = next(to_explore)
+    yield next_position
+    yield from ant_move_positions(next_position, occupied, explored)
 
 
 def bee_move_positions(position: tuple[int, int], occupied: set[tuple[int, int]]):
@@ -82,15 +74,14 @@ def positions_around_clockwise(position: tuple[int, int]) -> list[tuple[int, int
 
 def positions_next_neighbours(
     position: tuple[int, int], occupied: set[tuple[int, int]]
-) -> set[tuple[int, int]]:
+) -> Generator:
     """
-    Returns set of position around given position that are:
+    Generates position around given position that are:
     - not occupied,
     - next to neighbour position
     - not violating freedom of move rule
     """
     around_clockwise = positions_around_clockwise(position)
-    next_neighbour_pos = set()
 
     prev_around = around_clockwise[0]
     for i in range(1, len(around_clockwise) + 1):
@@ -101,11 +92,9 @@ def positions_next_neighbours(
             if (prev_around in occupied and next_around not in occupied) or (
                 prev_around not in occupied and next_around in occupied
             ):
-                next_neighbour_pos.add(curr_around)
+                yield curr_around
 
         prev_around = curr_around
-
-    return next_neighbour_pos
 
 
 PIECE_TO_MOVE = {
