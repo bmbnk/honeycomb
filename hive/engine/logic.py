@@ -97,7 +97,31 @@ class MovesProvider:
     def beetle_move_positions(
         self, position: tuple[int, int], occupied: set[tuple[int, int]]
     ):
-        ...
+        height_under_beetle = self._hive.stack_height(position) - 1
+        around_clockwise = self.positions_around_clockwise(position)
+
+        prev_around = around_clockwise[-2]
+        curr_around = around_clockwise[-1]
+        prev_height = self._hive.stack_height(prev_around)
+        curr_height = self._hive.stack_height(curr_around)
+        next_height = None
+        for i in range(len(around_clockwise)):
+            next_around = around_clockwise[i]
+
+            if {prev_around, curr_around, next_around} & occupied:
+                next_height = self._hive.stack_height(next_around)
+
+                if min(prev_height, next_height) <= max(
+                    height_under_beetle, curr_height
+                ):
+                    yield curr_around
+            else:
+                next_height = 0
+
+            prev_height = curr_height
+            curr_height = next_height
+            prev_around = curr_around
+            curr_around = next_around
 
     def grasshopper_move_positions(
         self, position: tuple[int, int], occupied: set[tuple[int, int]]
