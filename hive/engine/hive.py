@@ -29,8 +29,8 @@
 # First piece starts on the odd row with position (0, 0).
 
 
-from hive.engine import pieces as p
 from hive.engine import gamestrings as gs
+from hive.engine import pieces as p
 
 
 class HiveError(Exception):
@@ -79,12 +79,24 @@ class PositionsResolver:
     _same_relation = "."
 
     @classmethod
-    def move_offsets(cls, position: tuple[int, int]):
-        return set(
+    def even_offsets_clockwise(cls) -> list[tuple[int, int]]:
+        return list(cls._relation_to_move_offset["even"].values())
+
+    @classmethod
+    def is_row_even(cls, position: tuple[int, int]):
+        return position[0] % 2 == 1
+
+    @classmethod
+    def move_offsets_clockwise(cls, position: tuple[int, int]) -> list[tuple[int, int]]:
+        return list(
             cls._relation_to_move_offset[
-                "odd" if position[1] % 2 == 0 else "even"
+                "even" if cls.is_row_even(position) else "odd"
             ].values()
         )
+
+    @classmethod
+    def odd_offsets_clockwise(cls) -> list[tuple[int, int]]:
+        return list(cls._relation_to_move_offset["odd"].values())
 
     @classmethod
     def destination_position(
@@ -100,9 +112,9 @@ class PositionsResolver:
     def position_offset(
         cls, position: tuple[int, int], relation: str
     ) -> tuple[int, int]:
-        return cls._relation_to_move_offset["odd" if position[1] % 2 == 0 else "even"][
-            relation
-        ]
+        return cls._relation_to_move_offset[
+            "even" if cls.is_row_even(position) else "odd"
+        ][relation]
 
     @classmethod
     def _relation(cls, move_str: str) -> str:
@@ -157,21 +169,57 @@ class Hive:
             p.PieceColor.BLACK
         ) or position in self.positions(p.PieceColor.WHITE)
 
-    def positions(self, color: p.PieceColor) -> set[tuple[int, int]]:
-        pieces = self._pieces[color]["board"]["positions"]
-        return pieces
-
-    def pieces_on_board_str(self, color: p.PieceColor) -> set[str]:
+    def pieces_on_board_str(self, color: p.PieceColor | None = None) -> set[str]:
+        if color is None:
+            return self.pieces_on_board_str(
+                p.PieceColor.BLACK
+            ) | self.pieces_on_board_str(p.PieceColor.WHITE)
         pieces_str = self._pieces[color]["board"]["str"]
         return pieces_str
 
-    def pieces_on_board(self, color: p.PieceColor) -> set[p.Piece]:
+    def pieces_on_board(self, color: p.PieceColor | None = None) -> set[p.Piece]:
+        if color is None:
+            return self.pieces_on_board(p.PieceColor.BLACK) | self.pieces_on_board(
+                p.PieceColor.WHITE
+            )
         pieces = self._pieces[color]["board"]["instances"]
         return pieces
 
-    def pieces_in_hand_str(self, color: p.PieceColor) -> set[str]:
+    def pieces_in_hand_str(self, color: p.PieceColor | None = None) -> set[str]:
+        if color is None:
+            return self.pieces_in_hand_str(
+                p.PieceColor.BLACK
+            ) | self.pieces_in_hand_str(p.PieceColor.WHITE)
         pieces_str = self._pieces[color]["hand"]["str"]
         return pieces_str
+
+    def positions(self, color: p.PieceColor | None = None) -> set[tuple[int, int]]:
+        if color is None:
+            return self.positions(p.PieceColor.BLACK) | self.positions(
+                p.PieceColor.WHITE
+            )
+
+        pieces = self._pieces[color]["board"]["positions"]
+        return pieces
+
+    def stack_height(self, position: tuple[int, int]) -> int:
+        pieces = self.pieces_on_board()
+
+        for piece in pieces:
+            if piece.position == position:
+                height = 1
+
+                p = piece
+                while (p := p.piece_under) is not None:
+                    height += 1
+
+                p = piece
+                while (p := p.piece_above) is not None:
+                    height += 1
+
+                return height
+
+        return 0
 
     def move(self, piece_str: str, position: tuple[int, int]) -> None:
         """
@@ -189,13 +237,9 @@ class Hive:
                 break
 
     def _get_top_piece_on_position(self, position: tuple[int, int]) -> p.Piece | None:
-        assert position in (
-            self.positions(p.PieceColor.BLACK) | self.positions(p.PieceColor.WHITE)
-        )
+        assert position in self.positions()
 
-        pieces = self.pieces_on_board(p.PieceColor.BLACK) | self.pieces_on_board(
-            p.PieceColor.WHITE
-        )
+        pieces = self.pieces_on_board()
 
         for piece in pieces:
             if piece.position == position:

@@ -126,7 +126,27 @@ class MovesProvider:
     def grasshopper_move_positions(
         self, position: tuple[int, int], occupied: set[tuple[int, int]]
     ):
-        ...
+        even_rows_offsets = h.PositionsResolver.even_offsets_clockwise()
+        odd_rows_offsets = h.PositionsResolver.odd_offsets_clockwise()
+        offsets = (odd_rows_offsets, even_rows_offsets)
+
+        offsets_idx = 0
+        if h.PositionsResolver.is_row_even(position):
+            offsets_idx = 1
+
+        for i in range(len(even_rows_offsets)):
+            curr_offset = offsets[offsets_idx][i]
+            curr_position = h.sum_tuple_elem_wise(position, curr_offset)
+            if curr_position in occupied:
+                curr_offsets_idx = offsets_idx
+                landing_position = curr_position
+                while landing_position in occupied:
+                    curr_offsets_idx = (curr_offsets_idx + 1) % 2
+                    curr_offset = offsets[curr_offsets_idx][i]
+                    landing_position = h.sum_tuple_elem_wise(
+                        landing_position, curr_offset
+                    )
+                yield landing_position
 
     def spider_move_positions(
         self,
