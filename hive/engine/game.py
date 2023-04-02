@@ -1,6 +1,6 @@
 from enum import Enum, auto
 
-from hive.engine import pieces
+from hive.engine import logic, pieces
 from hive.engine.hive import Hive
 
 _GAME_TYPE = "Base"
@@ -36,7 +36,14 @@ class GameState(Enum):
 
 
 class Game:
-    __slots__ = "_hive", "_moves", "_state", "_turn_color", "_turn_num"
+    __slots__ = (
+        "_hive",
+        "_moves",
+        "_moves_provider",
+        "_state",
+        "_turn_color",
+        "_turn_num",
+    )
 
     def __init__(self):
         self.new_game()
@@ -57,10 +64,11 @@ class Game:
 
     def new_game(self, game_info: str = "") -> None:
         self._state = GameState.NotStarted
-        self._hive = Hive()
         self._moves = []
         self._turn_color = _STARTING_COLOR
         self._turn_num = 1
+        self._hive = Hive()
+        self._moves_provider = logic.MovesProvider(self._hive)
 
     def pass_move(self):
         pass
