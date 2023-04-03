@@ -1,3 +1,5 @@
+import math
+import queue
 from typing import Generator
 
 from hive.engine import hive as h
@@ -48,14 +50,65 @@ class MovesProvider:
         )
 
     def move_positions(self, piece: p.Piece):
-        if piece.piece_under is not None or self.is_onehive_broken(piece.position):
+        if piece.piece_above is not None or self.is_onehive_broken(piece):
             return
         yield from self._piece_to_moves_generator[piece.info.ptype](
             piece.position, self._hive.positions()
         )
 
-    def is_onehive_broken(self, position: tuple[int, int]) -> bool:
-        ...
+    def is_onehive_broken(self, piece: p.Piece) -> bool:
+        if piece.piece_under is not None:
+            return False
+
+        occupied = self._hive.positions()
+        pos_around = set(self.positions_around_clockwise(piece.position))
+        neighbours = pos_around & occupied
+        start = neighbours.pop()
+        steps_count = 0
+        frontier = queue.PriorityQueue()
+        frontier.put((0, (steps_count, start)))
+        visited = {piece.position}
+
+        return not self._hive_search(
+            frontier=frontier,
+            visited=visited,
+            occupied=occupied,
+            targets=neighbours,
+            heuristic_target=piece.position,
+        )
+
+    def _hive_search(
+        self,
+        frontier: queue.PriorityQueue,
+        visited: set[tuple[int, int]],
+        occupied: set[tuple[int, int]],
+        targets: set[tuple[int, int]],
+        heuristic_target: tuple[int, int],
+    ) -> bool:
+        """Returns True if found all targets or if targets where empty."""
+        _, (steps_count, position) = frontier.get()
+        visited.add(position)
+
+        if position in targets:
+            targets.remove(position)
+
+        if not targets:
+            return True
+
+        if visited == occupied:
+            return False
+
+        pos_around = set(self.positions_around_clockwise(position))
+        to_explore = (pos_around & occupied) - visited
+
+        for pos in to_explore:
+            score = self._search_heuristic(pos, heuristic_target) + steps_count + 1
+            frontier.put((score, (steps_count + 1, pos)))
+
+        return self._hive_search(frontier, visited, occupied, targets, heuristic_target)
+
+    def _search_heuristic(self, current: tuple[int, int], target: tuple[int, int]):
+        return math.sqrt(sum(((t - c) ** 2 for t, c in zip(target, current))))
 
     def ant_move_positions(
         self,

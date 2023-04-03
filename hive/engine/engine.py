@@ -107,6 +107,7 @@ class Engine:
         return self._game.status
 
     def options(self):
+        # TODO: It could be a good option to turn off move validation when training with AI for example
         return ""
 
     def pass_(self) -> str:
