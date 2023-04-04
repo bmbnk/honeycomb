@@ -35,6 +35,22 @@ class GameState(Enum):
 #         pass
 
 
+class GameError(Exception):
+    pass
+
+
+class InvalidMove(GameError):
+    pass
+
+
+class InvalidAddingPositionError(InvalidMove):
+    pass
+
+
+class InvalidMovingPositionError(InvalidMove):
+    pass
+
+
 class Game:
     __slots__ = (
         "_hive",
@@ -71,16 +87,47 @@ class Game:
         self._moves_provider = logic.MovesProvider(self._hive)
 
     def pass_move(self):
-        pass
+        self._next_turn()
 
     def play(self, piece_str: str, position: tuple[int, int]):
-        pass
+        """
+        Raises:
+            InvalidAddingPositionError: If adding position is not valid.
+            InvalidMovingPositionError: If moving position is not valid.
+        """
+        # TODO: Implement better validation logic then calculating all possible moves
+        color = pieces.get_piece_color(piece_str)
+        if piece_str in self._hive.pieces_in_hand_str(color):
+            adding_positions = self._moves_provider.adding_positions(color)
+            if position in adding_positions:
+                self._hive.add(piece_str, position)
+            else:
+                raise InvalidAddingPositionError
+        else:
+            piece = self._hive.piece(piece_str)
+            if position in self._moves_provider.move_positions(piece):
+                self._hive.move(piece_str, position)
+            else:
+                raise InvalidMovingPositionError
+
+        self._next_turn()
 
     def undo(self, to_undo: int) -> None:
         pass
 
     def valid_moves(self):
-        pass
+        piece_str_to_positions = {}
+
+        for piece in self._hive.pieces(self._turn_color):
+            move_positions = self._moves_provider.move_positions(piece)
+            piece_str = pieces.get_piece_string(piece.info)
+            piece_str_to_positions[piece_str] = move_positions
+
+        adding_positions = self._moves_provider.adding_positions(self._turn_color)
+        for piece_str in self._hive.pieces_in_hand_str():
+            piece_str_to_positions[piece_str] = adding_positions
+
+        return piece_str_to_positions
 
     def _next_turn(self):
         # TODO: check for the game end first

@@ -49,7 +49,7 @@ class MovesProvider:
             - positions_around_opponent_positions
         )
 
-    def move_positions(self, piece: p.Piece):
+    def move_positions(self, piece: p.Piece) -> Generator[tuple[int, int], None, None]:
         if piece.piece_above is not None or self.is_onehive_broken(piece):
             return
         yield from self._piece_to_moves_generator[piece.info.ptype](
@@ -115,7 +115,7 @@ class MovesProvider:
         position: tuple[int, int],
         occupied: set[tuple[int, int]],
         explored: set[tuple[int, int]] = set(),
-    ) -> Generator:
+    ) -> Generator[tuple[int, int], None, None]:
         explored.add(position)
 
         next_steps = self.bee_move_positions(position, occupied)
@@ -131,7 +131,7 @@ class MovesProvider:
 
     def bee_move_positions(
         self, position: tuple[int, int], occupied: set[tuple[int, int]]
-    ) -> Generator:
+    ) -> Generator[tuple[int, int], None, None]:
         around_clockwise = self.positions_around_clockwise(position)
 
         prev_around = around_clockwise[-2]
@@ -207,7 +207,7 @@ class MovesProvider:
         occupied: set[tuple[int, int]],
         explored: set = set(),
         step_counter: int = 0,
-    ) -> Generator:
+    ) -> Generator[tuple[int, int], None, None]:
         explored.add(position)
 
         next_steps = self.bee_move_positions(position, occupied)

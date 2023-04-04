@@ -177,11 +177,20 @@ class Hive:
         pieces_str = self._pieces[color]["board"]["str"]
         return pieces_str
 
-    def pieces_on_board(self, color: p.PieceColor | None = None) -> set[p.Piece]:
+    def piece(self, piece_str: str) -> p.Piece:
+        """
+        Raises:
+            NotValidPieceError: If there is no piece on board representing piece_str
+        """
+        color = p.get_piece_color(piece_str)
+        for piece in self.pieces(color):
+            if p.get_piece_string(piece.info) == piece_str:
+                return piece
+        raise NotValidPieceError
+
+    def pieces(self, color: p.PieceColor | None = None) -> set[p.Piece]:
         if color is None:
-            return self.pieces_on_board(p.PieceColor.BLACK) | self.pieces_on_board(
-                p.PieceColor.WHITE
-            )
+            return self.pieces(p.PieceColor.BLACK) | self.pieces(p.PieceColor.WHITE)
         pieces = self._pieces[color]["board"]["instances"]
         return pieces
 
@@ -203,7 +212,7 @@ class Hive:
         return pieces
 
     def stack_height(self, position: tuple[int, int]) -> int:
-        pieces = self.pieces_on_board()
+        pieces = self.pieces()
 
         for piece in pieces:
             if piece.position == position:
@@ -231,7 +240,7 @@ class Hive:
         if piece_str not in self.pieces_on_board_str(color):
             raise PieceNotInGameError
 
-        for piece in self.pieces_on_board(color):
+        for piece in self.pieces(color):
             if p.get_piece_string(piece.info) == piece_str:
                 self._transfer_piece(piece, position)
                 break
@@ -239,7 +248,7 @@ class Hive:
     def _get_top_piece_on_position(self, position: tuple[int, int]) -> p.Piece | None:
         assert position in self.positions()
 
-        pieces = self.pieces_on_board()
+        pieces = self.pieces()
 
         for piece in pieces:
             if piece.position == position:
@@ -257,7 +266,7 @@ class Hive:
 
         self.pieces_in_hand_str(new_piece.info.color).remove(piece_str)
 
-        self.pieces_on_board(new_piece.info.color).add(new_piece)
+        self.pieces(new_piece.info.color).add(new_piece)
         self.pieces_on_board_str(new_piece.info.color).add(piece_str)
         self.positions(new_piece.info.color).add(position)
 
