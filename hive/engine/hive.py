@@ -28,6 +28,7 @@
 #
 # First piece starts on the odd row with position (0, 0).
 
+import collections
 
 from hive.engine import gamestrings as gs
 from hive.engine import pieces as p
@@ -129,11 +130,30 @@ class PositionsResolver:
         return cls._same_relation
 
 
+class MovesStack:
+    __slots__ = "_stack"
+
+    def __init__(self):
+        self._stack = collections.deque()
+
+    def push(
+        self,
+        piece: p.Piece,
+        start_position: tuple[int, int] | None,
+        end_position: tuple[int, int],
+    ):
+        self._stack.append((piece, start_position, end_position))
+
+    def pop(self):
+        return self._stack.pop()
+
+
 class Hive:
-    __slots__ = "_pieces"
+    __slots__ = "_pieces", "_moves_stack"
 
     def __init__(self):
         self._pieces = {}
+        self._moves_stack = MovesStack()
 
         for color in p.PieceColor:
             self._pieces[color] = {
@@ -245,6 +265,23 @@ class Hive:
                 self._transfer_piece(piece, position)
                 break
 
+    def undo(self, moves_num: int):
+        for _ in range(moves_num):
+            if not self._moves_stack:
+                break
+
+            piece, start_position, end_position = self._moves_stack.pop()
+            if start_position is None:
+                piece_str = p.get_piece_string(piece.info)
+                piece_color = piece.info.color
+
+                self.pieces_on_board_str(piece_color).remove(piece_str)
+                self.positions(piece_color).remove(end_position)
+                self.pieces(piece_color).remove(piece)
+                self.pieces_in_hand_str(piece_color).add(piece_str)
+            else:
+                self._transfer_piece(piece, start_position)
+
     def _get_top_piece_on_position(self, position: tuple[int, int]) -> p.Piece | None:
         assert position in self.positions()
 
@@ -270,6 +307,8 @@ class Hive:
         self.pieces_on_board_str(new_piece.info.color).add(piece_str)
         self.positions(new_piece.info.color).add(position)
 
+        self._moves_stack.push(new_piece, None, position)
+
     def _transfer_piece(self, piece: p.Piece, position: tuple[int, int]) -> None:
         if piece.piece_under is not None:
             piece.piece_under.piece_above = piece.piece_above
@@ -277,7 +316,9 @@ class Hive:
         if piece.piece_above is not None:
             piece.piece_above.piece_under = piece.piece_under
 
-        self.positions(piece.info.color).remove(piece.position)
+        start_position = piece.position
+
+        self.positions(piece.info.color).remove(start_position)
 
         if not self.is_position_empty(position):
             top_piece_on_position = self._get_top_piece_on_position(position)
@@ -287,3 +328,5 @@ class Hive:
 
         piece.position = position
         self.positions(piece.info.color).add(piece.position)
+
+        self._moves_stack.push(piece, start_position, position)
