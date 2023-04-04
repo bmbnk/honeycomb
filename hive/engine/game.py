@@ -15,26 +15,6 @@ class GameState(Enum):
     WhiteWins = auto()
 
 
-# class CommandValidator:
-#     def validate(self, command):
-#         pass
-
-
-# @dataclass
-# class CommandParser:
-#     command: str
-#     arguments: list[str]
-
-
-# @dataclass
-# class Command:
-#     name: str
-#     arguments: list[str]
-
-#     def execute(self):
-#         pass
-
-
 class GameError(Exception):
     pass
 
@@ -113,7 +93,23 @@ class Game:
         self._next_turn()
 
     def undo(self, to_undo: int) -> None:
-        pass
+        if self._state == GameState.NotStarted or to_undo < 1:
+            return
+
+        self._turn_num -= to_undo // 2
+
+        if to_undo % 2 == 1:
+            if self._turn_color == _STARTING_COLOR:
+                self._turn_num -= 1
+            self._change_turn_color()
+
+        if self._turn_num < 1:
+            self.new_game()
+            return
+
+        self._hive.undo(to_undo)
+        self._moves = self._moves[:-to_undo]
+        self._state = GameState.InProgress
 
     def valid_moves(self):
         piece_str_to_positions = {}
@@ -129,13 +125,17 @@ class Game:
 
         return piece_str_to_positions
 
-    def _next_turn(self):
-        # TODO: check for the game end first
-
+    def _change_turn_color(self):
         if self._turn_color == pieces.PieceColor.WHITE:
             self._turn_color = pieces.PieceColor.BLACK
         else:
             self._turn_color = pieces.PieceColor.WHITE
 
+    def _next_turn(self):
+        # TODO: check for the game end first
+        if self._state == GameState.NotStarted:
+            self._state = GameState.InProgress
+
+        self._change_turn_color()
         if self._turn_color == _STARTING_COLOR:
             self._turn_num += 1
