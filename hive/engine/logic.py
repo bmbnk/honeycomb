@@ -32,18 +32,18 @@ class MovesProvider:
             if not opponent_pos:
                 return {(0, 0)}
 
-            return set(self.positions_around_clockwise(opponent_pos.pop()))
+            return set(h.PositionsResolver.positions_around_clockwise(opponent_pos.pop()))
 
         positions_around_player_positions = set()
         for pos in player_pos:
             positions_around_player_positions |= set(
-                self.positions_around_clockwise(pos)
+                h.PositionsResolver.positions_around_clockwise(pos)
             )
 
         positions_around_opponent_positions = set()
         for pos in opponent_pos:
             positions_around_opponent_positions |= set(
-                self.positions_around_clockwise(pos)
+                h.PositionsResolver.positions_around_clockwise(pos)
             )
 
         return (
@@ -64,7 +64,7 @@ class MovesProvider:
             return False
 
         occupied = self._hive.positions()
-        pos_around = set(self.positions_around_clockwise(piece.position))
+        pos_around = set(h.PositionsResolver.positions_around_clockwise(piece.position))
         neighbours = pos_around & occupied
         start = neighbours.pop()
         steps_count = 0
@@ -101,7 +101,7 @@ class MovesProvider:
         if visited == occupied:
             return False
 
-        pos_around = set(self.positions_around_clockwise(position))
+        pos_around = set(h.PositionsResolver.positions_around_clockwise(position))
         to_explore = (pos_around & occupied) - visited
 
         for pos in to_explore:
@@ -135,7 +135,7 @@ class MovesProvider:
     def bee_move_positions(
         self, position: tuple[int, int], occupied: set[tuple[int, int]]
     ) -> Generator[tuple[int, int], None, None]:
-        around_clockwise = self.positions_around_clockwise(position)
+        around_clockwise = h.PositionsResolver.positions_around_clockwise(position)
 
         prev_around = around_clockwise[-2]
         for i in range(len(around_clockwise)):
@@ -154,7 +154,7 @@ class MovesProvider:
         self, position: tuple[int, int], occupied: set[tuple[int, int]]
     ):
         height_under_beetle = self._hive.stack_height(position) - 1
-        around_clockwise = self.positions_around_clockwise(position)
+        around_clockwise = h.PositionsResolver.positions_around_clockwise(position)
 
         prev_around = around_clockwise[-2]
         curr_around = around_clockwise[-1]
@@ -223,11 +223,3 @@ class MovesProvider:
                 )
             else:
                 yield pos
-
-    def positions_around_clockwise(
-        self, position: tuple[int, int]
-    ) -> list[tuple[int, int]]:
-        return list(
-            (position[0] + offset[0], position[1] + offset[1])
-            for offset in h.PositionsResolver.move_offsets_clockwise(position)
-        )

@@ -80,6 +80,15 @@ class PositionsResolver:
     _same_relation = "."
 
     @classmethod
+    def destination_position(
+        cls, ref_pos: tuple[int, int], relation: str
+    ) -> tuple[int, int]:
+        if relation == cls._same_relation:
+            return ref_pos
+        offset = cls._position_offset(ref_pos, relation)
+        return sum_tuple_elem_wise(ref_pos, offset)
+
+    @classmethod
     def even_offsets_clockwise(cls) -> list[tuple[int, int]]:
         return list(cls._relation_to_move_offset["even"].values())
 
@@ -88,7 +97,22 @@ class PositionsResolver:
         return position[0] % 2 == 1
 
     @classmethod
-    def move_offsets_clockwise(cls, position: tuple[int, int]) -> list[tuple[int, int]]:
+    def odd_offsets_clockwise(cls) -> list[tuple[int, int]]:
+        return list(cls._relation_to_move_offset["odd"].values())
+
+    @classmethod
+    def positions_around_clockwise(
+        cls, position: tuple[int, int]
+    ) -> list[tuple[int, int]]:
+        return list(
+            (position[0] + offset[0], position[1] + offset[1])
+            for offset in cls._move_offsets_clockwise(position)
+        )
+
+    @classmethod
+    def _move_offsets_clockwise(
+        cls, position: tuple[int, int]
+    ) -> list[tuple[int, int]]:
         return list(
             cls._relation_to_move_offset[
                 "even" if cls.is_row_even(position) else "odd"
@@ -96,37 +120,12 @@ class PositionsResolver:
         )
 
     @classmethod
-    def odd_offsets_clockwise(cls) -> list[tuple[int, int]]:
-        return list(cls._relation_to_move_offset["odd"].values())
-
-    @classmethod
-    def destination_position(
-        cls, ref_pos: tuple[int, int], relation: str
-    ) -> tuple[int, int]:
-        if relation == cls._same_relation:
-            return ref_pos
-        offset = cls.position_offset(ref_pos, relation)
-        return sum_tuple_elem_wise(ref_pos, offset)
-
-    @classmethod
-    def position_offset(
+    def _position_offset(
         cls, position: tuple[int, int], relation: str
     ) -> tuple[int, int]:
         return cls._relation_to_move_offset[
             "even" if cls.is_row_even(position) else "odd"
         ][relation]
-
-    # @classmethod
-    # def relation(cls, move_str: str) -> str:
-    #     position_str = gs.MoveStringsDecoder._get_position_str(move_str)
-
-    #     for sign in gs.MoveStringsDecoder.relation_signs:
-    #         if position_str.startswith(sign):
-    #             return f"{sign}."
-    #         elif position_str.endswith(sign):
-    #             return f".{sign}"
-
-    #     return cls._same_relation
 
 
 class MovesStack:
