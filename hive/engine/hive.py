@@ -165,7 +165,11 @@ class Hive:
                 },
             }
 
-    def add(self, piece_str: str, position: tuple[int, int] = (0, 0)) -> None:
+    @property
+    def start_position(self):
+        return (0, 0)
+
+    def add(self, piece_str: str, position: tuple[int, int] | None = None) -> None:
         """
         Raises:
             PieceAlreadyExistsError: If piece_str is already in the hive.
@@ -179,6 +183,9 @@ class Hive:
             notation.PieceColor.BLACK
         ) or position in self.positions(notation.PieceColor.WHITE):
             raise NotEmptyPositionError
+
+        if position is None:
+            position = self.start_position
 
         self._register_piece(piece_str, position)
 

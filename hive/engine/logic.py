@@ -30,9 +30,11 @@ class MovesProvider:
 
         if not player_pos:
             if not opponent_pos:
-                return {(0, 0)}
+                return {self._hive.start_position}
 
-            return set(h.PositionsResolver.positions_around_clockwise(opponent_pos.pop()))
+            return set(
+                h.PositionsResolver.positions_around_clockwise(opponent_pos.pop())
+            )
 
         positions_around_player_positions = set()
         for pos in player_pos:
