@@ -3,6 +3,7 @@ import queue
 from typing import Generator
 
 from hive.engine import hive as h
+from hive.engine import notation
 from hive.engine import pieces as p
 
 
@@ -12,17 +13,19 @@ class MovesProvider:
     def __init__(self, hive: h.Hive) -> None:
         self._hive = hive
         self._piece_to_moves_generator = {
-            p.PieceType.ANT: self.ant_move_positions,
-            p.PieceType.BEE: self.bee_move_positions,
-            p.PieceType.BEETLE: self.beetle_move_positions,
-            p.PieceType.GRASSHOPPER: self.grasshopper_move_positions,
-            p.PieceType.SPIDER: self.spider_move_positions,
+            notation.PieceType.ANT: self.ant_move_positions,
+            notation.PieceType.BEE: self.bee_move_positions,
+            notation.PieceType.BEETLE: self.beetle_move_positions,
+            notation.PieceType.GRASSHOPPER: self.grasshopper_move_positions,
+            notation.PieceType.SPIDER: self.spider_move_positions,
         }
 
-    def adding_positions(self, color: p.PieceColor) -> set[tuple[int, int]]:
+    def adding_positions(self, color: notation.PieceColor) -> set[tuple[int, int]]:
         player_pos = self._hive.positions(color)
         opponent_pos = self._hive.positions(
-            p.PieceColor.WHITE if color == p.PieceColor.BLACK else p.PieceColor.BLACK
+            notation.PieceColor.WHITE
+            if color == notation.PieceColor.BLACK
+            else notation.PieceColor.BLACK
         )
 
         if not player_pos:

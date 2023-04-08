@@ -30,7 +30,7 @@
 
 import collections
 
-from hive.engine import gamestrings as gs
+from hive.engine import notation
 from hive.engine import pieces as p
 
 
@@ -101,9 +101,8 @@ class PositionsResolver:
 
     @classmethod
     def destination_position(
-        cls, ref_pos: tuple[int, int], move_str: str
+        cls, ref_pos: tuple[int, int], relation: str
     ) -> tuple[int, int]:
-        relation = cls._relation(move_str)
         if relation == cls._same_relation:
             return ref_pos
         offset = cls.position_offset(ref_pos, relation)
@@ -117,17 +116,17 @@ class PositionsResolver:
             "even" if cls.is_row_even(position) else "odd"
         ][relation]
 
-    @classmethod
-    def _relation(cls, move_str: str) -> str:
-        position_str = gs.MoveStringsDecoder._get_position_str(move_str)
+    # @classmethod
+    # def relation(cls, move_str: str) -> str:
+    #     position_str = gs.MoveStringsDecoder._get_position_str(move_str)
 
-        for sign in gs.MoveStringsDecoder.relation_signs:
-            if position_str.startswith(sign):
-                return f"{sign}."
-            elif position_str.endswith(sign):
-                return f".{sign}"
+    #     for sign in gs.MoveStringsDecoder.relation_signs:
+    #         if position_str.startswith(sign):
+    #             return f"{sign}."
+    #         elif position_str.endswith(sign):
+    #             return f".{sign}"
 
-        return cls._same_relation
+    #     return cls._same_relation
 
 
 class MovesStack:
@@ -155,10 +154,10 @@ class Hive:
         self._pieces = {}
         self._moves_stack = MovesStack()
 
-        for color in p.PieceColor:
+        for color in notation.PieceColor:
             self._pieces[color] = {
                 "hand": {
-                    "str": set(p.pieces_str(color)),
+                    "str": set(notation.pieces_str(color)),
                 },
                 "board": {
                     "instances": set(),
@@ -173,27 +172,27 @@ class Hive:
             PieceAlreadyExistsError: If piece_str is already in the hive.
             NotEmptyPositionError: If there is already a piece on position
         """
-        assert p.is_piece_str_valid(piece_str)
+        color, *_ = notation.PieceString.decompose(piece_str)
 
-        if piece_str in self.pieces_on_board_str(p.get_piece_color(piece_str)):
+        if piece_str in self.pieces_on_board_str(color):
             raise PieceAlreadyExistsError
-        if position in self.positions(p.PieceColor.BLACK) or position in self.positions(
-            p.PieceColor.WHITE
-        ):
+        if position in self.positions(
+            notation.PieceColor.BLACK
+        ) or position in self.positions(notation.PieceColor.WHITE):
             raise NotEmptyPositionError
 
         self._register_piece(piece_str, position)
 
     def is_position_empty(self, position: tuple[int, int]) -> bool:
         return position in self.positions(
-            p.PieceColor.BLACK
-        ) or position in self.positions(p.PieceColor.WHITE)
+            notation.PieceColor.BLACK
+        ) or position in self.positions(notation.PieceColor.WHITE)
 
-    def pieces_on_board_str(self, color: p.PieceColor | None = None) -> set[str]:
+    def pieces_on_board_str(self, color: notation.PieceColor | None = None) -> set[str]:
         if color is None:
             return self.pieces_on_board_str(
-                p.PieceColor.BLACK
-            ) | self.pieces_on_board_str(p.PieceColor.WHITE)
+                notation.PieceColor.BLACK
+            ) | self.pieces_on_board_str(notation.PieceColor.WHITE)
         pieces_str = self._pieces[color]["board"]["str"]
         return pieces_str
 
@@ -202,30 +201,37 @@ class Hive:
         Raises:
             NotValidPieceError: If there is no piece on board representing piece_str
         """
-        color = p.get_piece_color(piece_str)
+        color, *_ = notation.PieceString.decompose(piece_str)
         for piece in self.pieces(color):
-            if p.get_piece_string(piece.info) == piece_str:
+            p_str = notation.PieceString.build(
+                piece.info.color, piece.info.ptype, piece.info.num
+            )
+            if p_str == piece_str:
                 return piece
         raise NotValidPieceError
 
-    def pieces(self, color: p.PieceColor | None = None) -> set[p.Piece]:
+    def pieces(self, color: notation.PieceColor | None = None) -> set[p.Piece]:
         if color is None:
-            return self.pieces(p.PieceColor.BLACK) | self.pieces(p.PieceColor.WHITE)
+            return self.pieces(notation.PieceColor.BLACK) | self.pieces(
+                notation.PieceColor.WHITE
+            )
         pieces = self._pieces[color]["board"]["instances"]
         return pieces
 
-    def pieces_in_hand_str(self, color: p.PieceColor | None = None) -> set[str]:
+    def pieces_in_hand_str(self, color: notation.PieceColor | None = None) -> set[str]:
         if color is None:
             return self.pieces_in_hand_str(
-                p.PieceColor.BLACK
-            ) | self.pieces_in_hand_str(p.PieceColor.WHITE)
+                notation.PieceColor.BLACK
+            ) | self.pieces_in_hand_str(notation.PieceColor.WHITE)
         pieces_str = self._pieces[color]["hand"]["str"]
         return pieces_str
 
-    def positions(self, color: p.PieceColor | None = None) -> set[tuple[int, int]]:
+    def positions(
+        self, color: notation.PieceColor | None = None
+    ) -> set[tuple[int, int]]:
         if color is None:
-            return self.positions(p.PieceColor.BLACK) | self.positions(
-                p.PieceColor.WHITE
+            return self.positions(notation.PieceColor.BLACK) | self.positions(
+                notation.PieceColor.WHITE
             )
 
         pieces = self._pieces[color]["board"]["positions"]
@@ -255,13 +261,16 @@ class Hive:
         Raises:
             PieceNotInGameError: If there is no piece in the hive with provided piece_str.
         """
-        color = p.get_piece_color(piece_str)
+        color, *_ = notation.PieceString.decompose(piece_str)
 
         if piece_str not in self.pieces_on_board_str(color):
             raise PieceNotInGameError
 
         for piece in self.pieces(color):
-            if p.get_piece_string(piece.info) == piece_str:
+            p_str = notation.PieceString.build(
+                piece.info.color, piece.info.ptype, piece.info.num
+            )
+            if p_str == piece_str:
                 self._transfer_piece(piece, position)
                 break
 
@@ -272,7 +281,9 @@ class Hive:
 
             piece, start_position, end_position = self._moves_stack.pop()
             if start_position is None:
-                piece_str = p.get_piece_string(piece.info)
+                piece_str = notation.PieceString.build(
+                    piece.info.color, piece.info.ptype, piece.info.num
+                )
                 piece_color = piece.info.color
 
                 self.pieces_on_board_str(piece_color).remove(piece_str)

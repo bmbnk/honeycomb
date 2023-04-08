@@ -1,6 +1,7 @@
 import time
 from typing import Callable
 
+from hive.engine import notation
 from hive.engine.game import Game
 
 _MAX_TIME_FORMAT = "%H:%M:%S"
@@ -9,6 +10,8 @@ _VERSION = "1.0"
 
 
 class EngineError(Exception):
+    """Base class for errors that should contatin information for the user"""
+
     def __init__(self, message):
         self.message = message
 
@@ -22,8 +25,15 @@ class InvalidCommand(EngineError):
 
 
 class InvalidCommandParameters(EngineError):
-    def __init__(self, arguments):
-        self.message = f"Invalid command arguments: '{arguments}'."
+    def __init__(self, parameters):
+        self.message = f"Invalid command parameters: '{parameters}'."
+
+
+class InvalidCommandParametersNumber(EngineError):
+    def __init__(self, actual, valid):
+        self.message = (
+            f"Invalid number of command parameters: '{actual}'. Shuold be: {valid}."
+        )
 
 
 class EngineCommandExecutor:
@@ -33,6 +43,7 @@ class EngineCommandExecutor:
 
     def __init__(self) -> None:
         self._cmd_completion_str = "ok"
+        self._engine = Engine()
         self._cmd_to_method = {
             "bestmove": self._engine.bestmove,
             "info": self._engine.info,
@@ -43,7 +54,6 @@ class EngineCommandExecutor:
             "undo": self._engine.undo,
             "validmoves": self._engine.validmoves,
         }
-        self._engine = Engine()
 
     def execute(self, inp) -> str:
         return self._response(inp)
@@ -83,7 +93,13 @@ class Engine:
         self._name = _ENGINE_NAME
         self._version = _VERSION
 
-    def bestmove(self, limit_type: str, limit_value: str) -> str:
+    def bestmove(self, params: str) -> str:
+        param_list = params.split()
+        if len(param_list) != 2:
+            raise InvalidCommandParametersNumber(len(param_list), 2)
+
+        limit_type, limit_value = param_list
+
         if limit_type == "depth":
             if not limit_value.isdigit():
                 raise InvalidCommandParameters(limit_value)
@@ -92,40 +108,49 @@ class Engine:
             try:
                 time_info = time.strptime(limit_value, self._max_time_format)
             except ValueError:
-                raise InvalidCommandParameters((limit_value))
+                raise InvalidCommandParameters(limit_value)
             return self._bestmove_in_time(
                 time_info.tm_hour, time_info.tm_min, time_info.tm_sec
             )
-        else:
-            raise InvalidCommandParameters(limit_type)
+        raise InvalidCommandParameters(limit_type)
 
-    def info(self) -> str:
+    def info(self, params: str = "") -> str:
         return f"id {self._name} v{self._version}"
 
-    def newgame(self, game_info: str = "") -> str:
-        self._game.new_game()
+    def newgame(self, params: str) -> str:
+        if not params:
+            self._game.new_game()
+        elif notation.GameString.is_valid(params):
+            self._game.load_game(params)
+        elif notation.GameTypeString.is_valid(params):
+            self._game.new_game(params)
+        else:
+            raise InvalidCommandParameters(params)
+
         return self._game.status
 
-    def options(self):
+    def options(self, params: str = ""):
         # TODO: It could be a good option to turn off move validation when training with AI for example
         return ""
 
-    def pass_(self) -> str:
-        self._game.pass_move()
+    def pass_(self, params: str = "") -> str:
+        self.play("pass")
         return self._game.status
 
-    def play(self, move_str: str) -> str:
-        if 0 < len(move_str.split()) < 3:
-            # self._game.play(move_str)
+    def play(self, params: str) -> str:
+        if notation.MoveString.is_valid(params):
+            self._game.play(params)
             return self._game.status
-        else:
-            raise InvalidCommandParameters(move_str.split())
+        raise InvalidCommandParameters(params)
 
-    def undo(self, to_undo: int = 1) -> str:
-        self._game.undo(to_undo)
-        return self._game.status
+    def undo(self, params: str) -> str:
+        if params.isdigit():
+            to_undo = int(params)
+            self._game.undo(to_undo)
+            return self._game.status
+        raise InvalidCommandParameters(params.split())
 
-    def validmoves(self):
+    def validmoves(self, params: str = ""):
         pass
 
     def _bestmove_in_depth(self, depth: int) -> str:

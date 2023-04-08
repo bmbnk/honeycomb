@@ -1,21 +1,11 @@
-from enum import Enum, auto
+from hive.engine import logic, notation, pieces
+from hive.engine.engine import EngineError
+from hive.engine.hive import Hive, PositionsResolver
 
-from hive.engine import logic, pieces
-from hive.engine.hive import Hive
-
-_GAME_TYPE = "Base"
-_STARTING_COLOR = pieces.PieceColor.WHITE
+_STARTING_COLOR = notation.PieceColor.WHITE
 
 
-class GameState(Enum):
-    BlackWin = auto()
-    Draw = auto()
-    InProgress = auto()
-    NotStarted = auto()
-    WhiteWins = auto()
-
-
-class GameError(Exception):
+class GameError(EngineError):
     pass
 
 
@@ -24,11 +14,18 @@ class InvalidMove(GameError):
 
 
 class InvalidAddingPositionError(InvalidMove):
-    pass
+    def __init__(self, position):
+        self.message = f"Invalid adding position: {position}."
 
 
 class InvalidMovingPositionError(InvalidMove):
-    pass
+    def __init__(self, position):
+        self.message = f"Invalid moving position: {position}."
+
+
+class NotSupportedExpansionPieceError(GameError):
+    def __init__(self, expansions):
+        self.message = f"Not supported expansion pieces: {', '.join([e.name for e in expansions])}."
 
 
 class Game:
@@ -46,20 +43,39 @@ class Game:
 
     @property
     def status(self) -> str:
-        return ";".join(
-            [
-                _GAME_TYPE,
-                self._state.name,
-                pieces.get_turn_string(self._turn_num, self._turn_color),
-                *self._moves,
-            ]
+        return notation.GameString.build(
+            expansions=set(),
+            gamestate=self._state,
+            turn_num=self._turn_num,
+            turn_color=self._turn_color,
+            moves=self._moves,
         )
 
     def best_move(self):
         pass
 
-    def new_game(self, game_info: str = "") -> None:
-        self._state = GameState.NotStarted
+    def new_game(self, gametype_str: str = ""):
+        expansions = notation.GameTypeString.decompose(gametype_str)
+        if expansions:
+            raise NotSupportedExpansionPieceError(expansions)
+        self._state = notation.GameState.NotStarted
+        self._moves = []
+        self._turn_color = _STARTING_COLOR
+        self._turn_num = 1
+        self._hive = Hive()
+        self._moves_provider = logic.MovesProvider(self._hive)
+
+    def load_game(self, game_str: str) -> None:
+        (
+            expansions,
+            gamestate,
+            turn_color,
+            turn_num,
+            moves,
+        ) = notation.GameString.decompose(game_str)
+        if expansions:
+            raise NotSupportedExpansionPieceError(expansions)
+        self._state = notation.GameState.NotStarted
         self._moves = []
         self._turn_color = _STARTING_COLOR
         self._turn_num = 1
@@ -67,33 +83,62 @@ class Game:
         self._moves_provider = logic.MovesProvider(self._hive)
 
     def pass_move(self):
+        if self.valid_moves():
+            raise InvalidMove(
+                "The pass move is not a valid move if there are possible moves available."
+            )
         self._next_turn()
 
-    def play(self, piece_str: str, position: tuple[int, int]):
+    def play(self, move_str: str):
         """
         Raises:
             InvalidAddingPositionError: If adding position is not valid.
             InvalidMovingPositionError: If moving position is not valid.
         """
         # TODO: Implement better validation logic then calculating all possible moves
-        color = pieces.get_piece_color(piece_str)
-        if piece_str in self._hive.pieces_in_hand_str(color):
-            adding_positions = self._moves_provider.adding_positions(color)
-            if position in adding_positions:
-                self._hive.add(piece_str, position)
-            else:
-                raise InvalidAddingPositionError
-        else:
-            piece = self._hive.piece(piece_str)
-            if position in self._moves_provider.move_positions(piece):
-                self._hive.move(piece_str, position)
-            else:
-                raise InvalidMovingPositionError
 
-        self._next_turn()
+        piece_str, relation, ref_piece_str = notation.MoveString.decompose(move_str)
+
+        if all(x is None for x in (piece_str, relation, ref_piece_str)):
+            self.pass_move()
+        elif piece_str is not None and relation is not None:
+            if (
+                piece_str in self._hive.pieces_in_hand_str()
+                and ref_piece_str in self._hive.pieces_on_board_str()
+            ):
+                self._add(piece_str, relation, ref_piece_str)
+            else:
+                self._move(piece_str, relation, ref_piece_str)
+
+    def _add(self, piece_str: str, relation: str, ref_piece_str: str):
+        color, *_ = notation.PieceString.decompose(piece_str)
+        ref_piece = self._hive.piece(ref_piece_str)
+        destination = PositionsResolver.destination_position(
+            ref_piece.position, relation
+        )
+        adding_positions = self._moves_provider.adding_positions(color)
+        if destination in adding_positions:
+            self._hive.add(piece_str, destination)
+            self._next_turn()
+            return
+        raise InvalidAddingPositionError(relation.replace(".", ref_piece_str))
+
+    def _move(self, piece_str: str, relation: str, ref_piece_str: str | None):
+        if ref_piece_str is not None:
+            piece = self._hive.piece(piece_str)
+            ref_piece = self._hive.piece(ref_piece_str)
+            destination = PositionsResolver.destination_position(
+                ref_piece.position, relation
+            )
+            if destination in self._moves_provider.move_positions(piece):
+                self._hive.move(piece_str, destination)
+                self._next_turn()
+                return
+            raise InvalidMovingPositionError(relation.replace(".", ref_piece_str))
+        raise InvalidMovingPositionError(piece_str)
 
     def undo(self, to_undo: int) -> None:
-        if self._state == GameState.NotStarted or to_undo < 1:
+        if self._state == notation.GameState.NotStarted or to_undo < 1:
             return
 
         self._turn_num -= to_undo // 2
@@ -109,32 +154,37 @@ class Game:
 
         self._hive.undo(to_undo)
         self._moves = self._moves[:-to_undo]
-        self._state = GameState.InProgress
+        self._state = notation.GameState.InProgress
 
     def valid_moves(self):
         piece_str_to_positions = {}
 
         for piece in self._hive.pieces(self._turn_color):
             move_positions = self._moves_provider.move_positions(piece)
-            piece_str = pieces.get_piece_string(piece.info)
-            piece_str_to_positions[piece_str] = move_positions
+            move_positions = set(move_positions)
+            if move_positions:
+                piece_str = notation.PieceString.build(
+                    piece.info.color, piece.info.ptype, piece.info.num
+                )
+                piece_str_to_positions[piece_str] = move_positions
 
         adding_positions = self._moves_provider.adding_positions(self._turn_color)
-        for piece_str in self._hive.pieces_in_hand_str():
-            piece_str_to_positions[piece_str] = adding_positions
+        if adding_positions:
+            for piece_str in self._hive.pieces_in_hand_str():
+                piece_str_to_positions[piece_str] = adding_positions
 
         return piece_str_to_positions
 
     def _change_turn_color(self):
-        if self._turn_color == pieces.PieceColor.WHITE:
-            self._turn_color = pieces.PieceColor.BLACK
+        if self._turn_color == notation.PieceColor.WHITE:
+            self._turn_color = notation.PieceColor.BLACK
         else:
-            self._turn_color = pieces.PieceColor.WHITE
+            self._turn_color = notation.PieceColor.WHITE
 
     def _next_turn(self):
         # TODO: check for the game end first
-        if self._state == GameState.NotStarted:
-            self._state = GameState.InProgress
+        if self._state == notation.GameState.NotStarted:
+            self._state = notation.GameState.InProgress
 
         self._change_turn_color()
         if self._turn_color == _STARTING_COLOR:
