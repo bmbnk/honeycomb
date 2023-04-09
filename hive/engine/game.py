@@ -1,11 +1,10 @@
-from hive.engine import logic, notation, pieces
-from hive.engine.engine import EngineError
+from hive.engine import err, logic, notation, pieces
 from hive.engine.hive import Hive, PositionsResolver
 
 _STARTING_COLOR = notation.PieceColor.WHITE
 
 
-class GameError(EngineError):
+class GameError(err.BaseEngineError):
     pass
 
 
@@ -54,7 +53,7 @@ class Game:
     def best_move(self):
         pass
 
-    def new_game(self, gametype_str: str = ""):
+    def new_game(self, gametype_str: str = "Base"):
         expansions = notation.GameTypeString.decompose(gametype_str)
         if expansions:
             raise NotSupportedExpansionPieceError(expansions)
@@ -156,24 +155,55 @@ class Game:
         self._moves = self._moves[:-to_undo]
         self._state = notation.GameState.InProgress
 
-    def valid_moves(self):
-        piece_str_to_positions = {}
+    def valid_moves(self) -> set[str]:
+        valid_moves_str = set()
+
+        if not self._hive.is_bee_on_board(self._turn_color) and self._turn_num == 4:
+            adding_positions = self._moves_provider.adding_positions(self._turn_color)
+            bee_str = notation.PieceString.build(
+                self._turn_color, notation.PieceType.BEE, 0
+            )
+            for pos in adding_positions:
+                move_str = self._move_str(bee_str, pos)
+                valid_moves_str.add(move_str)
+            return valid_moves_str
 
         for piece in self._hive.pieces(self._turn_color):
-            move_positions = self._moves_provider.move_positions(piece)
-            move_positions = set(move_positions)
-            if move_positions:
-                piece_str = notation.PieceString.build(
-                    piece.info.color, piece.info.ptype, piece.info.num
-                )
-                piece_str_to_positions[piece_str] = move_positions
+            move_positions = set(self._moves_provider.move_positions(piece))
+            piece_str = notation.PieceString.build(
+                piece.info.color, piece.info.ptype, piece.info.num
+            )
+            for pos in move_positions:
+                move_str = self._move_str(piece_str, pos)
+                valid_moves_str.add(move_str)
 
         adding_positions = self._moves_provider.adding_positions(self._turn_color)
-        if adding_positions:
-            for piece_str in self._hive.pieces_in_hand_str():
-                piece_str_to_positions[piece_str] = adding_positions
+        for pos in adding_positions:
+            for piece_str in self._hive.pieces_in_hand_str(self._turn_color):
+                move_str = self._move_str(piece_str, pos)
+                valid_moves_str.add(move_str)
 
-        return piece_str_to_positions
+        return valid_moves_str
+
+    def _move_str(self, piece_str, target_position: tuple[int, int]) -> str:  # type: ignore
+        if target_position == self._hive.start_position:
+            return notation.MoveString.build(piece_str)
+
+        positions_on_board = self._hive.positions()
+        for pos_around in PositionsResolver.positions_around_clockwise(target_position):
+            if pos_around in positions_on_board:
+                for piece in self._hive.pieces():
+                    if piece.position == pos_around:
+                        relation = PositionsResolver.relation(
+                            target_position, pos_around
+                        )
+                        ref_piece_str = notation.PieceString.build(
+                            piece.info.color, piece.info.ptype, piece.info.num
+                        )
+                        move_str = notation.MoveString.build(
+                            piece_str, relation, ref_piece_str
+                        )
+                        return move_str
 
     def _change_turn_color(self):
         if self._turn_color == notation.PieceColor.WHITE:
