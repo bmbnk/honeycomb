@@ -30,28 +30,8 @@
 
 import collections
 
-from hive.engine import notation
+from hive.engine import err, notation
 from hive.engine import pieces as p
-
-
-class HiveError(Exception):
-    pass
-
-
-class NotEmptyPositionError(HiveError):
-    pass
-
-
-class NotValidPieceError(HiveError):
-    pass
-
-
-class PieceAlreadyExistsError(HiveError):
-    pass
-
-
-class PieceNotInGameError(HiveError):
-    pass
 
 
 def sum_tuple_elem_wise(a: tuple, b: tuple):
@@ -108,6 +88,10 @@ class PositionsResolver:
             (position[0] + offset[0], position[1] + offset[1])
             for offset in cls._move_offsets_clockwise(position)
         )
+
+    @classmethod
+    def relation(cls, position: tuple[int, int], ref_position: tuple[int, int]) -> str:
+        ...
 
     @classmethod
     def _move_offsets_clockwise(
@@ -170,24 +154,18 @@ class Hive:
         return (0, 0)
 
     def add(self, piece_str: str, position: tuple[int, int] | None = None) -> None:
-        """
-        Raises:
-            PieceAlreadyExistsError: If piece_str is already in the hive.
-            NotEmptyPositionError: If there is already a piece on position
-        """
-        color, *_ = notation.PieceString.decompose(piece_str)
-
-        if piece_str in self.pieces_on_board_str(color):
-            raise PieceAlreadyExistsError
-        if position in self.positions(
-            notation.PieceColor.BLACK
-        ) or position in self.positions(notation.PieceColor.WHITE):
-            raise NotEmptyPositionError
+        assert position not in self.positions()
+        assert piece_str not in self.pieces_on_board_str()
 
         if position is None:
             position = self.start_position
 
         self._register_piece(piece_str, position)
+
+    def is_bee_on_board(self, color: notation.PieceColor) -> bool:
+        return notation.PieceString.build(
+            color, notation.PieceType.BEE, 0
+        ) in self.pieces_on_board_str(color)
 
     def is_position_empty(self, position: tuple[int, int]) -> bool:
         return position in self.positions(
@@ -202,11 +180,9 @@ class Hive:
         pieces_str = self._pieces[color]["board"]["str"]
         return pieces_str
 
-    def piece(self, piece_str: str) -> p.Piece:
-        """
-        Raises:
-            NotValidPieceError: If there is no piece on board representing piece_str
-        """
+    def piece(self, piece_str: str) -> p.Piece | None:
+        assert piece_str in self.pieces_on_board_str()
+
         color, *_ = notation.PieceString.decompose(piece_str)
         for piece in self.pieces(color):
             p_str = notation.PieceString.build(
@@ -214,7 +190,6 @@ class Hive:
             )
             if p_str == piece_str:
                 return piece
-        raise NotValidPieceError
 
     def pieces(self, color: notation.PieceColor | None = None) -> set[p.Piece]:
         if color is None:
@@ -263,14 +238,8 @@ class Hive:
         return 0
 
     def move(self, piece_str: str, position: tuple[int, int]) -> None:
-        """
-        Raises:
-            PieceNotInGameError: If there is no piece in the hive with provided piece_str.
-        """
+        assert piece_str in self.pieces_on_board_str()
         color, *_ = notation.PieceString.decompose(piece_str)
-
-        if piece_str not in self.pieces_on_board_str(color):
-            raise PieceNotInGameError
 
         for piece in self.pieces(color):
             p_str = notation.PieceString.build(

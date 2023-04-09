@@ -1,7 +1,7 @@
 import time
 from typing import Callable
 
-from hive.engine import notation
+from hive.engine import err, notation
 from hive.engine.game import Game
 
 _MAX_TIME_FORMAT = "%H:%M:%S"
@@ -9,14 +9,8 @@ _ENGINE_NAME = "EngineName"
 _VERSION = "1.0"
 
 
-class EngineError(Exception):
-    """Base class for errors that should contatin information for the user"""
-
-    def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return f"err {self.message}"
+class EngineError(err.BaseEngineError):
+    pass
 
 
 class InvalidCommand(EngineError):
@@ -61,7 +55,7 @@ class EngineCommandExecutor:
     def _response(self, inp) -> str:
         try:
             result = self._cmd_result(inp)
-        except EngineError as e:
+        except err.BaseEngineError as e:
             result = str(e)
 
         return f"{result}\n{self._cmd_completion_str}"
@@ -151,7 +145,8 @@ class Engine:
         raise InvalidCommandParameters(params.split())
 
     def validmoves(self, params: str = ""):
-        pass
+        valid_moves_str = self._game.valid_moves()
+        return ";".join(valid_moves_str)
 
     def _bestmove_in_depth(self, depth: int) -> str:
         return ""
