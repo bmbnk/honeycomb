@@ -36,26 +36,30 @@ class MovesProvider:
                 h.PositionsResolver.positions_around_clockwise(opponent_pos.pop())
             )
 
-        positions_around_player_positions = set()
+        positions_around_player = set()
         for pos in player_pos:
-            positions_around_player_positions |= set(
+            positions_around_player |= set(
                 h.PositionsResolver.positions_around_clockwise(pos)
             )
 
-        positions_around_opponent_positions = set()
+        positions_around_opponent = set()
         for pos in opponent_pos:
-            positions_around_opponent_positions |= set(
+            positions_around_opponent |= set(
                 h.PositionsResolver.positions_around_clockwise(pos)
             )
 
         return (
-            positions_around_player_positions
+            positions_around_player
             - (player_pos | opponent_pos)
-            - positions_around_opponent_positions
+            - positions_around_opponent
         )
 
     def move_positions(self, piece: p.Piece) -> Generator[tuple[int, int], None, None]:
-        if piece.piece_above is not None or self.is_onehive_broken(piece):
+        if (
+            piece.piece_above is not None
+            or self.is_onehive_broken(piece)
+            or not self._hive.is_bee_on_board(piece.info.color)
+        ):
             return
         yield from self._piece_to_moves_generator[piece.info.ptype](
             piece.position, self._hive.positions()
