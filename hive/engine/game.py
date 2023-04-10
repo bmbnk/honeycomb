@@ -12,6 +12,13 @@ class InvalidMove(GameError):
     pass
 
 
+class InvalidPieceColor(InvalidMove):
+    def __init__(self, turn_color):
+        self.message = (
+            f"Invalid piece color. Now it's {turn_color.name.lower()}'s turn."
+        )
+
+
 class InvalidAddingPositionError(InvalidMove):
     def __init__(self, position):
         self.message = f"Invalid adding position: {position}."
@@ -98,29 +105,51 @@ class Game:
 
         piece_str, relation, ref_piece_str = notation.MoveString.decompose(move_str)
 
-        if all(x is None for x in (piece_str, relation, ref_piece_str)):
-            self.pass_move()
-        elif piece_str is not None and relation is not None:
-            if (
-                piece_str in self._hive.pieces_in_hand_str()
-                and ref_piece_str in self._hive.pieces_on_board_str()
-            ):
-                self._add(piece_str, relation, ref_piece_str)
-            else:
-                self._move(piece_str, relation, ref_piece_str)
+        if piece_str is not None:
+            color, *_ = notation.PieceString.decompose(piece_str)
+            if color != self._turn_color:
+                raise InvalidPieceColor(self._turn_color)
 
-    def _add(self, piece_str: str, relation: str, ref_piece_str: str):
-        color, *_ = notation.PieceString.decompose(piece_str)
-        ref_piece = self._hive.piece(ref_piece_str)
-        destination = PositionsResolver.destination_position(
-            ref_piece.position, relation
-        )
-        adding_positions = self._moves_provider.adding_positions(color)
-        if destination in adding_positions:
-            self._hive.add(piece_str, destination)
+        if piece_str is None:
+            self.pass_move()
+        elif piece_str in self._hive.pieces_in_hand_str():
+            self._add(piece_str, relation, ref_piece_str)
+        else:
+            self._move(piece_str, relation, ref_piece_str)
+
+        self._moves.append(move_str)
+
+    def _add(self, piece_str: str, relation: str | None, ref_piece_str: str | None):
+        if relation is None and not self._hive.pieces_on_board_str():
+            self._hive.add(piece_str)
             self._next_turn()
             return
-        raise InvalidAddingPositionError(relation.replace(".", ref_piece_str))
+
+        color, *_ = notation.PieceString.decompose(piece_str)
+        opponent_color = (
+            notation.PieceColor.BLACK
+            if color == notation.PieceColor.WHITE
+            else notation.PieceColor.WHITE
+        )
+
+        if (
+            relation is not None
+            and ref_piece_str is not None
+            and ref_piece_str in self._hive.pieces_on_board_str(opponent_color)
+        ):
+            ref_piece = self._hive.piece(ref_piece_str)
+            destination = PositionsResolver.destination_position(
+                ref_piece.position, relation
+            )
+            adding_positions = self._moves_provider.adding_positions(color)
+            if destination in adding_positions:
+                self._hive.add(piece_str, destination)
+                self._next_turn()
+                return
+
+        raise InvalidAddingPositionError(
+            notation.MoveString.build(piece_str, relation, ref_piece_str)
+        )
 
     def _move(self, piece_str: str, relation: str, ref_piece_str: str | None):
         if ref_piece_str is not None:

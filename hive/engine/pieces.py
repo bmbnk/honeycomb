@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import NamedTuple
 
 from hive.engine import notation
@@ -10,12 +9,20 @@ class PieceInfo(NamedTuple):
     num: int
 
 
-@dataclass
 class Piece:
-    info: PieceInfo
-    position: tuple[int, int]
-    piece_under: "Piece | None"
-    piece_above: "Piece | None"
+    slots = "info", "position", "piece_under", "piece_above"
+
+    def __init__(
+        self,
+        info: PieceInfo,
+        position: tuple[int, int],
+        piece_under: "Piece | None",
+        piece_above: "Piece | None",
+    ):
+        self.info = info
+        self.position = position
+        self.piece_under = piece_under
+        self.piece_above = piece_above
 
 
 def get_piece_info(piece_str: str) -> PieceInfo:

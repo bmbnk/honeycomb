@@ -123,12 +123,11 @@ class MoveString:
         prog = re.compile("(\\S+)(?: (\\S+))?")
         if match := prog.fullmatch(move_str):
             piece_str, moving_part = match.groups()
+            if moving_part is None:
+                return piece_str, None, None
+
             if PieceString.is_valid(piece_str):
                 relation = "."
-
-                if moving_part is None:
-                    return piece_str, relation, None
-
                 ref_piece_str = moving_part
 
                 if moving_part[0] in cls._relation_signs:
@@ -164,29 +163,6 @@ class MoveString:
                 if PieceString.is_valid(ref_piece_str):
                     return True
         return False
-
-    # @property
-    # @classmethod
-    # def relation_signs(cls) -> frozenset:
-    #     return cls._relation_signs
-    # @classmethod
-    # def get_piece_to_move(cls, move_str: str) -> str:
-    #     return move_str.split()[0]
-
-    # @classmethod
-    # def _get_position_str(cls, move_str: str) -> str:
-    #     str_parts = move_str.split()
-
-    #     if len(str_parts) == 1:
-    #         return move_str
-    #     return str_parts[1]
-
-    # @classmethod
-    # def get_ref_piece(cls, move_str: str) -> str:
-    #     pos_str = cls._get_position_str(move_str)
-    #     if pos_str == move_str and any(sign in pos_str for sign in cls._relation_signs):
-    #         return ""
-    #     return pos_str.strip("".join(cls._relation_signs))
 
 
 class GameTypeString:
@@ -285,7 +261,7 @@ class PieceString:
     def decompose(
         cls, piece_str: str
     ) -> tuple[PieceColor, PieceType] | tuple[PieceColor, PieceType, int]:
-        prog = re.compile("([bw](?:(?:[Q])|(?:[SB][12])|(?:[AG][1-3])))")
+        prog = re.compile("([bw])(?:(?:(Q))|(?:([SB])([12]))|(?:([AG])([1-3])))")
         if match := prog.fullmatch(piece_str):
             color_str, type_str, *num = [
                 group for group in match.groups() if group is not None

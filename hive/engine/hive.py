@@ -29,9 +29,30 @@
 # First piece starts on the odd row with position (0, 0).
 
 import collections
+import copy
 
 from hive.engine import err, notation
 from hive.engine import pieces as p
+
+
+class HiveError(err.BaseEngineError):
+    pass
+
+
+class NotEmptyPositionError(HiveError):
+    def __init__(self):
+        message = "Provided position is not empty."
+        super().__init__(message)
+
+
+class PieceAlreadyExistsError(HiveError):
+    def __init__(self, piece_str):
+        self.message = f"Provided piece is already on the board: {piece_str}"
+
+
+class PieceNotInGameError(HiveError):
+    def __init__(self, piece_str):
+        self.message = f"Provided piece is not present on the board: {piece_str}"
 
 
 def sum_tuple_elem_wise(a: tuple, b: tuple):
@@ -154,8 +175,15 @@ class Hive:
         return (0, 0)
 
     def add(self, piece_str: str, position: tuple[int, int] | None = None) -> None:
-        assert position not in self.positions()
-        assert piece_str not in self.pieces_on_board_str()
+        """
+        Raises:
+            PieceAlreadyExistsError: If piece_str is already in the hive.
+            NotEmptyPositionError: If there is already a piece on position
+        """
+        if piece_str in self.pieces_on_board_str():
+            raise PieceAlreadyExistsError(piece_str)
+        if position in self.positions():
+            raise NotEmptyPositionError
 
         if position is None:
             position = self.start_position
@@ -178,10 +206,13 @@ class Hive:
                 notation.PieceColor.BLACK
             ) | self.pieces_on_board_str(notation.PieceColor.WHITE)
         pieces_str = self._pieces[color]["board"]["str"]
-        return pieces_str
+        return set(pieces_str)
 
-    def piece(self, piece_str: str) -> p.Piece | None:
-        assert piece_str in self.pieces_on_board_str()
+    def piece(self, piece_str: str) -> p.Piece:
+        """
+        Raises:
+            PieceNotInGameError: If there is no piece on board representing piece_str
+        """
 
         color, *_ = notation.PieceString.decompose(piece_str)
         for piece in self.pieces(color):
@@ -189,7 +220,9 @@ class Hive:
                 piece.info.color, piece.info.ptype, piece.info.num
             )
             if p_str == piece_str:
-                return piece
+                return copy.deepcopy(piece)
+
+        raise PieceNotInGameError(piece_str)
 
     def pieces(self, color: notation.PieceColor | None = None) -> set[p.Piece]:
         if color is None:
@@ -197,7 +230,7 @@ class Hive:
                 notation.PieceColor.WHITE
             )
         pieces = self._pieces[color]["board"]["instances"]
-        return pieces
+        return set(pieces)
 
     def pieces_in_hand_str(self, color: notation.PieceColor | None = None) -> set[str]:
         if color is None:
@@ -205,7 +238,7 @@ class Hive:
                 notation.PieceColor.BLACK
             ) | self.pieces_in_hand_str(notation.PieceColor.WHITE)
         pieces_str = self._pieces[color]["hand"]["str"]
-        return pieces_str
+        return set(pieces_str)
 
     def positions(
         self, color: notation.PieceColor | None = None
@@ -215,8 +248,8 @@ class Hive:
                 notation.PieceColor.WHITE
             )
 
-        pieces = self._pieces[color]["board"]["positions"]
-        return pieces
+        positions = self._pieces[color]["board"]["positions"]
+        return set(positions)
 
     def stack_height(self, position: tuple[int, int]) -> int:
         pieces = self.pieces()
@@ -238,8 +271,14 @@ class Hive:
         return 0
 
     def move(self, piece_str: str, position: tuple[int, int]) -> None:
-        assert piece_str in self.pieces_on_board_str()
+        """
+        Raises:
+            PieceNotInGameError: If there is no piece in the hive with provided piece_str.
+        """
         color, *_ = notation.PieceString.decompose(piece_str)
+
+        if piece_str not in self.pieces_on_board_str(color):
+            raise PieceNotInGameError(piece_str)
 
         for piece in self.pieces(color):
             p_str = notation.PieceString.build(
