@@ -298,12 +298,13 @@ class Hive:
                 piece_str = notation.PieceString.build(
                     piece.info.color, piece.info.ptype, piece.info.num
                 )
-                piece_color = piece.info.color
 
-                self.pieces_on_board_str(piece_color).remove(piece_str)
-                self.positions(piece_color).remove(end_position)
-                self.pieces(piece_color).remove(piece)
-                self.pieces_in_hand_str(piece_color).add(piece_str)
+                self._pieces[piece.info.color]["board"]["str"].remove(piece_str)
+                self._pieces[piece.info.color]["board"]["positions"].remove(
+                    end_position
+                )
+                self._pieces[piece.info.color]["board"]["instances"].remove(piece)
+                self._pieces[piece.info.color]["hand"]["str"].add(piece_str)
             else:
                 self._transfer_piece(piece, start_position)
 
@@ -326,11 +327,10 @@ class Hive:
             piece_above=None,
         )
 
-        self.pieces_in_hand_str(new_piece.info.color).remove(piece_str)
-
-        self.pieces(new_piece.info.color).add(new_piece)
-        self.pieces_on_board_str(new_piece.info.color).add(piece_str)
-        self.positions(new_piece.info.color).add(position)
+        self._pieces[new_piece.info.color]["hand"]["str"].remove(piece_str)
+        self._pieces[new_piece.info.color]["board"]["str"].add(piece_str)
+        self._pieces[new_piece.info.color]["board"]["instances"].add(new_piece)
+        self._pieces[new_piece.info.color]["board"]["positions"].add(position)
 
         self._moves_stack.push(new_piece, None, position)
 
@@ -343,7 +343,7 @@ class Hive:
 
         start_position = piece.position
 
-        self.positions(piece.info.color).remove(start_position)
+        self._pieces[piece.info.color]["board"]["positions"].remove(start_position)
 
         if not self.is_position_empty(position):
             top_piece_on_position = self._get_top_piece_on_position(position)
@@ -352,6 +352,6 @@ class Hive:
             top_piece_on_position.piece_above = piece
 
         piece.position = position
-        self.positions(piece.info.color).add(piece.position)
+        self._pieces[piece.info.color]["board"]["positions"].add(piece.position)
 
         self._moves_stack.push(piece, start_position, position)
