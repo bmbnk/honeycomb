@@ -137,7 +137,7 @@ class Engine:
             return self._game.status
         raise InvalidCommandParameters(params)
 
-    def undo(self, params: str) -> str:
+    def undo(self, params: str = "1") -> str:
         if params.isdigit():
             to_undo = int(params)
             self._game.undo(to_undo)
