@@ -6,7 +6,7 @@ from hive.engine.game import Game
 
 _MAX_TIME_FORMAT = "%H:%M:%S"
 _ENGINE_NAME = "EngineName"
-_VERSION = "1.0"
+_VERSION = "0.1"
 
 
 class EngineError(err.BaseEngineError):
