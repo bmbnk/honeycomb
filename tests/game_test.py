@@ -44,6 +44,15 @@ def test_after_load_game_state_equals_gamestring(game: Game, gamestring: str):
 
 @pytest.mark.parametrize(
     "gametype",
+    ["Base+M", "Base+L", "Base+P", "Base+ML", "Base+MP", "Base+LP", "Base+MLP"],
+)
+def test_new_game_with_unsupported_expansions_raises_error(game: Game, gametype: str):
+    with pytest.raises(NotSupportedExpansionPieceError):
+        game.new_game(gametype)
+
+
+@pytest.mark.parametrize(
+    "gamestring",
     [
         "Base+M;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
         "Base+L;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
@@ -53,15 +62,6 @@ def test_after_load_game_state_equals_gamestring(game: Game, gamestring: str):
         "Base+LP;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
         "Base+MLP;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
     ],
-)
-def test_new_game_with_unsupported_expansions_raises_error(game: Game, gametype: str):
-    with pytest.raises(NotSupportedExpansionPieceError):
-        game.new_game(gametype)
-
-
-@pytest.mark.parametrize(
-    "gamestring",
-    ["Base+M", "Base+L", "Base+P", "Base+ML", "Base+MP", "Base+LP", "Base+MLP"],
 )
 def test_load_game_with_unsupported_expansions_raises_error(
     game: Game, gamestring: str
