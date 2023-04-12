@@ -57,6 +57,10 @@ class Game:
             moves=self._moves,
         )
 
+    @property
+    def supported_expansions(self) -> set[notation.ExpansionPieces]:
+        return set()
+
     def best_move(self):
         pass
 

@@ -1,6 +1,6 @@
 import pytest
 
-from hive.engine.game import Game, InvalidMove
+from hive.engine.game import Game, InvalidMove, NotSupportedExpansionPieceError
 from hive.engine.notation import GameState, GameString, PieceColor
 
 
@@ -40,6 +40,34 @@ def test_after_load_game_state_equals_gamestring(game: Game, gamestring: str):
             for status_property, orig_property in zip(status_props, orig_props)
         ]
     )
+
+
+@pytest.mark.parametrize(
+    "gametype",
+    [
+        "Base+M;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+        "Base+L;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+        "Base+P;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+        "Base+ML;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+        "Base+MP;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+        "Base+LP;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+        "Base+MLP;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+    ],
+)
+def test_new_game_with_unsupported_expansions_raises_error(game: Game, gametype: str):
+    with pytest.raises(NotSupportedExpansionPieceError):
+        game.new_game(gametype)
+
+
+@pytest.mark.parametrize(
+    "gamestring",
+    ["Base+M", "Base+L", "Base+P", "Base+ML", "Base+MP", "Base+LP", "Base+MLP"],
+)
+def test_load_game_with_unsupported_expansions_raises_error(
+    game: Game, gamestring: str
+):
+    with pytest.raises(NotSupportedExpansionPieceError):
+        game.load_game(gamestring)
 
 
 def test_game_not_started_after_new_game(game: Game):
