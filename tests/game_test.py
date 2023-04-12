@@ -34,12 +34,8 @@ def test_after_load_game_state_equals_gamestring(game: Game, gamestring: str):
     game.load_game(gamestring)
     orig_props = GameString.decompose(gamestring)
     status_props = GameString.decompose(game.status)
-    assert all(
-        [
-            status_property == orig_property
-            for status_property, orig_property in zip(status_props, orig_props)
-        ]
-    )
+    for status_property, orig_property in zip(status_props, orig_props):
+        assert status_property == orig_property
 
 
 @pytest.mark.parametrize(
