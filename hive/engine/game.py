@@ -130,16 +130,11 @@ class Game:
             return
 
         color, *_ = notation.PieceString.decompose(piece_str)
-        opponent_color = (
-            notation.PieceColor.BLACK
-            if color == notation.PieceColor.WHITE
-            else notation.PieceColor.WHITE
-        )
 
         if (
             relation is not None
             and ref_piece_str is not None
-            and ref_piece_str in self._hive.pieces_on_board_str(opponent_color)
+            and ref_piece_str in self._hive.pieces_on_board_str()
         ):
             ref_piece = self._hive.piece(ref_piece_str)
             destination = PositionsResolver.destination_position(
