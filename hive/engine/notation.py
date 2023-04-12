@@ -37,7 +37,7 @@ class InvalidTurnStringError(NotationError):
 
 
 class GameState(Enum):
-    BlackWin = auto()
+    BlackWins = auto()
     Draw = auto()
     InProgress = auto()
     NotStarted = auto()
