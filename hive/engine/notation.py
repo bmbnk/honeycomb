@@ -170,7 +170,9 @@ class GameTypeString:
 
     @classmethod
     def build(cls, expansions: set[ExpansionPieces]) -> str:
-        return f"{cls._base_game_name}+{''.join([e.name for e in expansions])}"
+        if expansions:
+            return f"{cls._base_game_name}+{''.join([e.name for e in expansions])}"
+        return cls._base_game_name
 
     @classmethod
     def decompose(cls, gametype: str) -> set[ExpansionPieces]:
