@@ -1,16 +1,14 @@
-from hive import engine
+from hive.engine import Engine
 
 
 class App:
-    __slots__ = "_cmd_executor"
-
     def __init__(self) -> None:
-        self._cmd_executor = engine.EngineCommandExecutor()
+        self.engine = Engine()
 
     def run(self) -> None:
         command = "info"
         while command != "q":
-            result = self._cmd_executor.execute(command)
+            result = self.engine.execute(command)
             print(result)
             command = input()
 

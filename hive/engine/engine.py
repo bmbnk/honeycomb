@@ -4,9 +4,9 @@ from typing import Callable
 from hive.engine import err, notation
 from hive.engine.game import Game
 
-_MAX_TIME_FORMAT = "%H:%M:%S"
-_ENGINE_NAME = "EngineName"
-_VERSION = "0.1"
+__version__ = "0.1.0"
+MAX_TIME_FORMAT = "%H:%M:%S"
+ENGINE_NAME = "EngineName"
 
 
 class EngineError(err.BaseEngineError):
@@ -30,24 +30,15 @@ class InvalidCommandParametersNumber(EngineError):
         )
 
 
-class EngineCommandExecutor:
+class Engine:
     """Provides UHP engine command responses."""
 
-    __slots__ = "_cmd_completion_str", "_cmd_to_method", "_engine"
+    __slots__ = "_cmd_completion_str", "_game", "_cmd_func_mapper"
 
     def __init__(self) -> None:
         self._cmd_completion_str = "ok"
-        self._engine = Engine()
-        self._cmd_to_method = {
-            "bestmove": self._engine.bestmove,
-            "info": self._engine.info,
-            "newgame": self._engine.newgame,
-            "options": self._engine.options,
-            "pass": self._engine.pass_,
-            "play": self._engine.play,
-            "undo": self._engine.undo,
-            "validmoves": self._engine.validmoves,
-        }
+        self._cmd_func_mapper = CommandFunctionMapper()
+        self._game = Game()
 
     def execute(self, inp) -> str:
         return self._response(inp)
@@ -62,12 +53,54 @@ class EngineCommandExecutor:
 
     def _cmd_result(self, inp) -> str:
         command, *params = inp.split()
+        cmd_func = self._cmd_func_mapper[command]
+        params_str = " ".join(params)
+        return cmd_func(self._game, params_str)
+
+
+class CommandFunctionMapper:
+    def __init__(self) -> None:
+        self._cmd_to_method = {
+            "bestmove": _bestmove,
+            "info": _info,
+            "newgame": _newgame,
+            "options": _options,
+            "pass": _pass,
+            "play": _play,
+            "undo": _undo,
+            "validmoves": _validmoves,
+        }
+        self._game_dependent_methods = {
+            _bestmove,
+            _newgame,
+            _pass,
+            _play,
+            _undo,
+            _validmoves,
+        }
+        self._params_dependent_methods = {
+            _bestmove,
+            _newgame,
+            _options,
+            _play,
+            _undo,
+        }
+
+    def __getitem__(self, command) -> Callable[[Game, str], str]:
         method = self._method(command)
-        if params:
-            params_str = " ".join(params)
-            return method(params_str)
-        else:
-            return method()
+
+        def cmd_func(game: Game, params: str):
+            args = []
+            if method in self._game_dependent_methods:
+                args.append(game)
+            if method in self._params_dependent_methods:
+                args.append(params)
+            elif params:
+                raise InvalidCommandParameters(params)
+
+            return method(*args)
+
+        return cmd_func
 
     def _method(self, command: str) -> Callable[..., str]:
         if command not in self._cmd_to_method:
@@ -76,80 +109,81 @@ class EngineCommandExecutor:
         return self._cmd_to_method[command]
 
 
-class Engine:
-    """Executes UHP engine commands."""
+def _bestmove(game: Game, params: str) -> str:
+    param_list = params.split()
+    if len(param_list) != 2:
+        raise InvalidCommandParametersNumber(len(param_list), 2)
 
-    __slots__ = "_game", "_max_time_format", "_name", "_version"
+    limit_type, limit_value = param_list
 
-    def __init__(self) -> None:
-        self._game = Game()
-        self._max_time_format = _MAX_TIME_FORMAT
-        self._name = _ENGINE_NAME
-        self._version = _VERSION
+    if limit_type == "depth":
+        if not limit_value.isdigit():
+            raise InvalidCommandParameters(limit_value)
+        return _bestmove_in_depth(game, int(limit_value))
+    elif limit_type == "time":
+        try:
+            time_info = time.strptime(limit_value, MAX_TIME_FORMAT)
+        except ValueError:
+            raise InvalidCommandParameters(limit_value)
+        return _bestmove_in_time(
+            game, time_info.tm_hour, time_info.tm_min, time_info.tm_sec
+        )
+    raise InvalidCommandParameters(limit_type)
 
-    def bestmove(self, params: str) -> str:
-        param_list = params.split()
-        if len(param_list) != 2:
-            raise InvalidCommandParametersNumber(len(param_list), 2)
 
-        limit_type, limit_value = param_list
+def _info() -> str:
+    return f"id {ENGINE_NAME} v{__version__}"
 
-        if limit_type == "depth":
-            if not limit_value.isdigit():
-                raise InvalidCommandParameters(limit_value)
-            return self._bestmove_in_depth(int(limit_value))
-        elif limit_type == "time":
-            try:
-                time_info = time.strptime(limit_value, self._max_time_format)
-            except ValueError:
-                raise InvalidCommandParameters(limit_value)
-            return self._bestmove_in_time(
-                time_info.tm_hour, time_info.tm_min, time_info.tm_sec
-            )
-        raise InvalidCommandParameters(limit_type)
 
-    def info(self, params: str = "") -> str:
-        return f"id {self._name} v{self._version}"
-
-    def newgame(self, params: str) -> str:
-        if not params:
-            self._game.new_game()
-        elif notation.GameString.is_valid(params):
-            self._game.load_game(params)
-        elif notation.GameTypeString.is_valid(params):
-            self._game.new_game(params)
-        else:
-            raise InvalidCommandParameters(params)
-
-        return self._game.status
-
-    def options(self, params: str = ""):
-        # TODO: It could be a good option to turn off move validation when training with AI for example
-        return ""
-
-    def pass_(self, params: str = "") -> str:
-        self.play("pass")
-        return self._game.status
-
-    def play(self, params: str) -> str:
-        if notation.MoveString.is_valid(params):
-            self._game.play(params)
-            return self._game.status
+def _newgame(game: Game, params: str) -> str:
+    if not params:
+        game.new_game()
+    elif notation.GameString.is_valid(params):
+        game.load_game(params)
+    elif notation.GameTypeString.is_valid(params):
+        game.new_game(params)
+    else:
         raise InvalidCommandParameters(params)
 
-    def undo(self, params: str = "1") -> str:
-        if params.isdigit():
-            to_undo = int(params)
-            self._game.undo(to_undo)
-            return self._game.status
-        raise InvalidCommandParameters(params.split())
+    return game.status
 
-    def validmoves(self, params: str = ""):
-        valid_moves_str = self._game.valid_moves()
-        return ";".join(valid_moves_str)
 
-    def _bestmove_in_depth(self, depth: int) -> str:
-        return ""
+def _options(params: str):
+    # TODO: It could be a good option to turn off move validation when training with AI for example
+    return ""
 
-    def _bestmove_in_time(self, hour: int, min: int, sec: int):
-        return ""
+
+def _pass(game: Game) -> str:
+    _play(game, "pass")
+    return game.status
+
+
+def _play(game: Game, params: str) -> str:
+    if notation.MoveString.is_valid(params):
+        game.play(params)
+        return game.status
+    raise InvalidCommandParameters(params)
+
+
+def _undo(game: Game, params: str) -> str:
+    if not params:
+        params = "1"
+
+    if params.isdigit():
+        to_undo = int(params)
+        game.undo(to_undo)
+        return game.status
+    raise InvalidCommandParameters(params.split())
+
+
+def _validmoves(game: Game):
+    valid_moves_str = game.valid_moves()
+    return ";".join(valid_moves_str)
+
+
+def _bestmove_in_depth(game: Game, depth: int) -> str:
+    return ""
+
+
+def _bestmove_in_time(game: Game, hour: int, min: int, sec: int):
+    return ""
