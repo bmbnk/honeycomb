@@ -231,12 +231,20 @@ class GameString:
     def decompose(
         cls, game_str: str
     ) -> tuple[set[ExpansionPieces], GameState, PieceColor, int, list[str]]:
-        prog = re.compile("([^;]*);([^;]*);([^;]*)(?:(;.*)*)")
+        prog = re.compile("([^;]*);([^;]*);([^;]*)(?:;(.*))?")
         if match := prog.fullmatch(game_str):
-            gametype_str, gamestate_str, turn_str, *moves = match.groups()
+            gametype_str, gamestate_str, turn_str, moves_part = match.groups()
             expansion_pieces = GameTypeString.decompose(gametype_str)
             gamestate = GameState[gamestate_str]
             turn_color, turn_num = TurnString.decompose(turn_str)
+
+            moves = []
+            if moves_part is not None:
+                for move in moves_part.split(";"):
+                    if not MoveString.is_valid(move):
+                        raise InvalidMoveStringError(f"Invalid MoveString: {move}.")
+                    moves.append(move)
+
             return expansion_pieces, gamestate, turn_color, turn_num, moves
 
         raise InvalidGameStringError(f"Invalid GameString: {game_str}.")
