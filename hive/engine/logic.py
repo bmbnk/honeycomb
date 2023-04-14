@@ -62,9 +62,9 @@ class MovesProvider:
             or not self._hive.is_bee_on_board(color)
         ):
             return
-        yield from self._piece_to_moves_generator[ptype](
-            piece.position, self._hive.positions()
-        )
+        occupied = set(self._hive.positions())
+        occupied.remove(piece.position)
+        yield from self._piece_to_moves_generator[ptype](piece.position, occupied)
 
     def is_onehive_broken(self, piece: p.Piece) -> bool:
         if piece.piece_under is not None:
