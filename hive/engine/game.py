@@ -34,11 +34,16 @@ class NotSupportedExpansionPieceError(GameError):
         self.message = f"Not supported expansion pieces: {', '.join([e.name for e in expansions])}."
 
 
+class GameNotPossibleError(GameError):
+    def __init__(self, reason):
+        self.message = f"Not valid game entry. {reason}"
+
+
 class Game:
     __slots__ = (
         "_hive",
-        "_moves",
         "_moves_provider",
+        "_moves",
         "_state",
         "_turn_color",
         "_turn_num",
@@ -66,14 +71,13 @@ class Game:
 
     def new_game(self, gametype_str: str = "Base"):
         expansions = notation.GameTypeString.decompose(gametype_str)
-        if expansions:
-            raise NotSupportedExpansionPieceError(expansions)
-        self._state = notation.GameState.NotStarted
-        self._moves = []
-        self._turn_color = _STARTING_COLOR
-        self._turn_num = 1
-        self._hive = Hive()
-        self._moves_provider = logic.MovesProvider(self._hive)
+        self._init_game(
+            expansions=expansions,
+            gamestate=notation.GameState.NotStarted,
+            turn_color=_STARTING_COLOR,
+            turn_num=1,
+            moves=[],
+        )
 
     def load_game(self, game_str: str) -> None:
         (
@@ -83,14 +87,13 @@ class Game:
             turn_num,
             moves,
         ) = notation.GameString.decompose(game_str)
-        if expansions:
-            raise NotSupportedExpansionPieceError(expansions)
-        self._state = notation.GameState.NotStarted
-        self._moves = []
-        self._turn_color = _STARTING_COLOR
-        self._turn_num = 1
-        self._hive = Hive()
-        self._moves_provider = logic.MovesProvider(self._hive)
+        self._init_game(
+            expansions=expansions,
+            gamestate=gamestate,
+            turn_color=turn_color,
+            turn_num=turn_num,
+            moves=moves,
+        )
 
     def pass_move(self):
         if self.valid_moves():
@@ -198,11 +201,8 @@ class Game:
 
         for piece in self._hive.pieces(self._turn_color):
             move_positions = set(self._moves_provider.move_positions(piece))
-            piece_str = notation.PieceString.build(
-                piece.info.color, piece.info.ptype, piece.info.num
-            )
             for pos in move_positions:
-                move_str = self._move_str(piece_str, pos)
+                move_str = self._move_str(piece.piece_str, pos)
                 valid_moves_str.add(move_str)
 
         adding_positions = self._moves_provider.adding_positions(self._turn_color)
@@ -213,6 +213,39 @@ class Game:
 
         return valid_moves_str
 
+    def _init_game(
+        self,
+        expansions: set[notation.ExpansionPieces],
+        gamestate: notation.GameState,
+        turn_color: notation.PieceColor,
+        turn_num: int,
+        moves: list[str],
+    ):
+        if not expansions.issubset(self.supported_expansions):
+            raise NotSupportedExpansionPieceError(expansions)
+
+        self._state = notation.GameState.NotStarted
+        self._moves = []
+        self._turn_color = _STARTING_COLOR
+        self._turn_num = 1
+        self._hive = Hive(expansions)
+        self._moves_provider = logic.MovesProvider(self._hive)
+
+        for move in moves:
+            self.play(move)
+
+        err_msg = None
+        if gamestate != self._state:
+            err_msg = f"Provided game state: '{gamestate.name}' is not correct for moves: {'; '.join(moves)}. It should be: '{self._state.name}'"
+        if turn_color != self._turn_color:
+            err_msg = f"Provided turn color: '{turn_color.name.capitalize()}' is not correct for moves: {'; '.join(moves)}. It should be: '{self._turn_color.name.capitalize()}'"
+        if turn_num != self._turn_num:
+            err_msg = f"Provided turn number: '{turn_num}' is not correct for moves: {'; '.join(moves)}. It should be: '{self._turn_num}'"
+
+        if err_msg is not None:
+            self.new_game()
+            raise GameNotPossibleError(err_msg)
+
     def _move_str(self, piece_str, target_position: tuple[int, int]) -> str:  # type: ignore
         if target_position == self._hive.start_position:
             return notation.MoveString.build(piece_str)
@@ -220,16 +253,13 @@ class Game:
         positions_on_board = self._hive.positions()
         for pos_around in PositionsResolver.positions_around_clockwise(target_position):
             if pos_around in positions_on_board:
-                for piece in self._hive.pieces():
-                    if piece.position == pos_around:
+                for ref_piece in self._hive.pieces():
+                    if ref_piece.position == pos_around:
                         relation = PositionsResolver.relation(
                             target_position, pos_around
                         )
-                        ref_piece_str = notation.PieceString.build(
-                            piece.info.color, piece.info.ptype, piece.info.num
-                        )
                         move_str = notation.MoveString.build(
-                            piece_str, relation, ref_piece_str
+                            piece_str, relation, ref_piece.piece_str
                         )
                         return move_str
 
