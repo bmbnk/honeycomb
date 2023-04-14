@@ -165,7 +165,9 @@ class MovesStack:
 class Hive:
     __slots__ = "_pieces", "_moves_stack"
 
-    def __init__(self):
+    def __init__(self, expansions: set[notation.ExpansionPieces] = set()):
+        assert expansions == set(), "Expansions not implemented."
+
         self._pieces = {}
         self._moves_stack = MovesStack()
 
@@ -227,10 +229,7 @@ class Hive:
 
         color, *_ = notation.PieceString.decompose(piece_str)
         for piece in self.pieces(color):
-            p_str = notation.PieceString.build(
-                piece.info.color, piece.info.ptype, piece.info.num
-            )
-            if p_str == piece_str:
+            if piece.piece_str == piece_str:
                 return copy.deepcopy(piece)
 
         raise PieceNotInGameError(piece_str)
@@ -292,10 +291,7 @@ class Hive:
             raise PieceNotInGameError(piece_str)
 
         for piece in self.pieces(color):
-            p_str = notation.PieceString.build(
-                piece.info.color, piece.info.ptype, piece.info.num
-            )
-            if p_str == piece_str:
+            if piece.piece_str == piece_str:
                 self._transfer_piece(piece, position)
                 break
 
@@ -306,16 +302,12 @@ class Hive:
 
             piece, start_position, end_position = self._moves_stack.pop()
             if start_position is None:
-                piece_str = notation.PieceString.build(
-                    piece.info.color, piece.info.ptype, piece.info.num
-                )
+                color, *_ = notation.PieceString.decompose(piece.piece_str)
 
-                self._pieces[piece.info.color]["board"]["str"].remove(piece_str)
-                self._pieces[piece.info.color]["board"]["positions"].remove(
-                    end_position
-                )
-                self._pieces[piece.info.color]["board"]["instances"].remove(piece)
-                self._pieces[piece.info.color]["hand"]["str"].add(piece_str)
+                self._pieces[color]["board"]["str"].remove(piece.piece_str)
+                self._pieces[color]["board"]["positions"].remove(end_position)
+                self._pieces[color]["board"]["instances"].remove(piece)
+                self._pieces[color]["hand"]["str"].add(piece.piece_str)
             else:
                 self._transfer_piece(piece, start_position)
 
@@ -332,16 +324,17 @@ class Hive:
 
     def _register_piece(self, piece_str: str, position: tuple[int, int]) -> None:
         new_piece = p.Piece(
-            info=p.get_piece_info(piece_str),
+            piece_str=piece_str,
             position=position,
             piece_under=None,
             piece_above=None,
         )
+        color, *_ = notation.PieceString.decompose(piece_str)
 
-        self._pieces[new_piece.info.color]["hand"]["str"].remove(piece_str)
-        self._pieces[new_piece.info.color]["board"]["str"].add(piece_str)
-        self._pieces[new_piece.info.color]["board"]["instances"].add(new_piece)
-        self._pieces[new_piece.info.color]["board"]["positions"].add(position)
+        self._pieces[color]["hand"]["str"].remove(piece_str)
+        self._pieces[color]["board"]["str"].add(piece_str)
+        self._pieces[color]["board"]["instances"].add(new_piece)
+        self._pieces[color]["board"]["positions"].add(position)
 
         self._moves_stack.push(new_piece, None, position)
 
@@ -353,8 +346,8 @@ class Hive:
             piece.piece_above.piece_under = piece.piece_under
 
         start_position = piece.position
-
-        self._pieces[piece.info.color]["board"]["positions"].remove(start_position)
+        color, *_ = notation.PieceString.decompose(piece.piece_str)
+        self._pieces[color]["board"]["positions"].remove(start_position)
 
         if not self.is_position_empty(position):
             top_piece_on_position = self._get_top_piece_on_position(position)
@@ -363,6 +356,6 @@ class Hive:
             top_piece_on_position.piece_above = piece
 
         piece.position = position
-        self._pieces[piece.info.color]["board"]["positions"].add(piece.position)
+        self._pieces[color]["board"]["positions"].add(piece.position)
 
         self._moves_stack.push(piece, start_position, position)

@@ -55,13 +55,14 @@ class MovesProvider:
         )
 
     def move_positions(self, piece: p.Piece) -> Generator[tuple[int, int], None, None]:
+        color, ptype, *_ = notation.PieceString.decompose(piece.piece_str)
         if (
             piece.piece_above is not None
             or self.is_onehive_broken(piece)
-            or not self._hive.is_bee_on_board(piece.info.color)
+            or not self._hive.is_bee_on_board(color)
         ):
             return
-        yield from self._piece_to_moves_generator[piece.info.ptype](
+        yield from self._piece_to_moves_generator[ptype](
             piece.position, self._hive.positions()
         )
 
