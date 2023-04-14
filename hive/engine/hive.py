@@ -209,9 +209,7 @@ class Hive:
         ) in self.pieces_on_board_str(color)
 
     def is_position_empty(self, position: tuple[int, int]) -> bool:
-        return position in self.positions(
-            notation.PieceColor.BLACK
-        ) or position in self.positions(notation.PieceColor.WHITE)
+        return position not in self.positions()
 
     def pieces_on_board_str(self, color: notation.PieceColor | None = None) -> set[str]:
         if color is None:
