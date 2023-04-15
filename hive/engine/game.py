@@ -158,13 +158,14 @@ class Game:
         self._moves = []
         self._turn_color = _STARTING_COLOR
         self._turn_num = 1
-        self._hive = Hive()
+        self._expansions = expansions
+        self._hive = Hive(self._expansions)
         self._moves_provider = logic.MovesProvider(self._hive)
 
         if not expansions.issubset(self._moves_provider.supported_expansions):
+            self._hive = Hive()
+            self._moves_provider = logic.MovesProvider(self._hive)
             raise NotSupportedExpansionPieceError(expansions)
-
-        self._expansions = expansions
 
     def _move(self, piece_str: str, relation: str | None, ref_piece_str: str | None):
         if relation is None:

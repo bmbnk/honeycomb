@@ -165,14 +165,14 @@ class MovesStack:
 class Hive:
     __slots__ = "_pieces", "_moves_stack"
 
-    def __init__(self):
+    def __init__(self, expansions: set[notation.ExpansionPieces] = set()):
         self._pieces = {}
         self._moves_stack = MovesStack()
 
         for color in notation.PieceColor:
             self._pieces[color] = {
                 "hand": {
-                    "str": set(notation.pieces_str(color)),
+                    "str": set(notation.pieces_str(color, expansions)),
                 },
                 "board": {
                     "instances": set(),

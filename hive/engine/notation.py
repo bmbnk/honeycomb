@@ -5,6 +5,8 @@ from hive.engine import err
 
 # from hive.engine.engine import EngineError
 
+PIECE_MAX_NUM = 3
+
 
 class NotationError(err.BaseEngineError):
     pass
@@ -48,44 +50,6 @@ class PieceColor(Enum):
     WHITE = "w"
 
 
-def pieces_str(color: PieceColor):
-    return {
-        PieceColor.BLACK: frozenset(
-            (
-                "bA1",
-                "bA2",
-                "bA3",
-                "bB1",
-                "bB2",
-                "bG1",
-                "bG2",
-                "bG3",
-                "bQ",
-                "bS1",
-                "bS2",
-            )
-        ),
-        PieceColor.WHITE: frozenset(
-            (
-                "wA1",
-                "wA2",
-                "wA3",
-                "wB1",
-                "wB2",
-                "wG1",
-                "wG2",
-                "wG3",
-                "wQ",
-                "wS1",
-                "wS2",
-            )
-        ),
-    }[color]
-
-
-PIECE_STR_LEN = 3
-
-
 class PieceType(Enum):
     @classmethod
     def has(cls, ptype):
@@ -104,6 +68,28 @@ class ExpansionPieces(PieceType):
     MOSQUITO = "M"
     LADYBUG = "L"
     PILLBUG = "P"
+
+
+def pieces_str(color: PieceColor, expansion_pieces: set[ExpansionPieces] = set()):
+    pieces_str = set()
+
+    color_str = color.value
+    ptype_strs = {base_piece.value for base_piece in BasePieces}
+    ptype_strs |= {
+        expansion_piece.value
+        for expansion_piece in ExpansionPieces
+        if expansion_piece in expansion_pieces
+    }
+    num_strs = {str(num) for num in range(1, PIECE_MAX_NUM + 1)}
+    num_strs.add("")
+
+    for ptype_str in ptype_strs:
+        for num_str in num_strs:
+            piece_str = color_str + ptype_str + num_str
+            if PieceString.is_valid(piece_str):
+                pieces_str.add(piece_str)
+
+    return pieces_str
 
 
 class MoveString:
@@ -236,6 +222,7 @@ class GameString:
     def decompose(
         cls, game_str: str
     ) -> tuple[set[ExpansionPieces], GameState, PieceColor, int, list[str]]:
+        # TODO: Refactor all string building, decomposing and validating classes so that there is only one regex compilation per runtime
         prog = re.compile("([^;]*);([^;]*);([^;]*)(?:;(.*))?")
         if match := prog.fullmatch(game_str):
             gametype_str, gamestate_str, turn_str, moves_part = match.groups()
@@ -276,7 +263,9 @@ class PieceString:
     def decompose(
         cls, piece_str: str
     ) -> tuple[PieceColor, PieceType] | tuple[PieceColor, PieceType, int]:
-        prog = re.compile("([bw])(?:(?:(Q))|(?:([SB])([12]))|(?:([AG])([1-3])))")
+        prog = re.compile(
+            "([bw])(?:(?:(Q))|(?:([SB])([12]))|(?:([AG])([1-3]))|(?:(M))|(?:(L))|(?:(P)))"
+        )
         if match := prog.fullmatch(piece_str):
             color_str, type_str, *num = [
                 group for group in match.groups() if group is not None
@@ -295,5 +284,7 @@ class PieceString:
 
     @classmethod
     def is_valid(cls, piece_str: str) -> bool:
-        prog = re.compile("([bw](?:(?:[Q])|(?:[SB][12])|(?:[AG][1-3])))")
+        prog = re.compile(
+            "([bw])(?:(?:(Q))|(?:([SB])([12]))|(?:([AG])([1-3]))|(?:(M))|(?:(L))|(?:(P)))"
+        )
         return prog.fullmatch(piece_str) is not None
