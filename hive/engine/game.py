@@ -62,10 +62,6 @@ class Game:
             moves=self._moves,
         )
 
-    @property
-    def supported_expansions(self) -> set[notation.ExpansionPieces]:
-        return set()
-
     def best_move(self):
         pass
 
@@ -221,14 +217,14 @@ class Game:
         turn_num: int,
         moves: list[str],
     ):
-        if not expansions.issubset(self.supported_expansions):
+        if not expansions.issubset(self._moves_provider.supported_expansions):
             raise NotSupportedExpansionPieceError(expansions)
 
         self._state = notation.GameState.NotStarted
         self._moves = []
         self._turn_color = _STARTING_COLOR
         self._turn_num = 1
-        self._hive = Hive(expansions)
+        self._hive = Hive()
         self._moves_provider = logic.MovesProvider(self._hive)
 
         for move in moves:

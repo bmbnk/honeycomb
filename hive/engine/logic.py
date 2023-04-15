@@ -20,6 +20,12 @@ class MovesProvider:
             notation.PieceType.SPIDER: self.spider_move_positions,
         }
 
+    @property
+    def supported_expansions(self) -> set[notation.ExpansionPieces]:
+        return {
+            e for e in notation.ExpansionPieces
+        } & self._piece_to_moves_generator.keys()
+
     def adding_positions(self, color: notation.PieceColor) -> set[tuple[int, int]]:
         player_pos = self._hive.positions(color)
         opponent_pos = self._hive.positions(

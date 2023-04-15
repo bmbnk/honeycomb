@@ -165,9 +165,7 @@ class MovesStack:
 class Hive:
     __slots__ = "_pieces", "_moves_stack"
 
-    def __init__(self, expansions: set[notation.ExpansionPieces] = set()):
-        assert expansions == set(), "Expansions not implemented."
-
+    def __init__(self):
         self._pieces = {}
         self._moves_stack = MovesStack()
 
