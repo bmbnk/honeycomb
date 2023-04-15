@@ -149,7 +149,10 @@ class Game:
             notation.MoveString.build(piece_str, relation, ref_piece_str)
         )
 
-    def _move(self, piece_str: str, relation: str, ref_piece_str: str | None):
+    def _move(self, piece_str: str, relation: str | None, ref_piece_str: str | None):
+        if relation is None:
+            raise InvalidMovingPositionError(piece_str)
+
         if ref_piece_str is not None:
             piece = self._hive.piece(piece_str)
             ref_piece = self._hive.piece(ref_piece_str)
