@@ -1,7 +1,7 @@
 import pytest
 
 from hive.engine.game import Game, InvalidMove, NotSupportedExpansionPieceError
-from hive.engine.notation import GameState, GameString, PieceColor
+from hive.engine.notation import GameState, GameString
 
 
 @pytest.fixture

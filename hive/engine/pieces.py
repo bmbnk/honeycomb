@@ -1,5 +1,3 @@
-from typing import NamedTuple
-
 from hive.engine import notation
 
 
