@@ -41,6 +41,7 @@ class GameNotPossibleError(GameError):
 
 class Game:
     __slots__ = (
+        "_expansions",
         "_hive",
         "_moves_provider",
         "_moves",
@@ -50,12 +51,12 @@ class Game:
     )
 
     def __init__(self):
-        self.new_game()
+        self._init_new_game()
 
     @property
     def status(self) -> str:
         return notation.GameString.build(
-            expansions=set(),
+            expansions=self._expansions,
             gamestate=self._state,
             turn_num=self._turn_num,
             turn_color=self._turn_color,
@@ -67,13 +68,7 @@ class Game:
 
     def new_game(self, gametype_str: str = "Base"):
         expansions = notation.GameTypeString.decompose(gametype_str)
-        self._init_game(
-            expansions=expansions,
-            gamestate=notation.GameState.NotStarted,
-            turn_color=_STARTING_COLOR,
-            turn_num=1,
-            moves=[],
-        )
+        self._init_new_game(expansions)
 
     def load_game(self, game_str: str) -> None:
         (
@@ -83,13 +78,22 @@ class Game:
             turn_num,
             moves,
         ) = notation.GameString.decompose(game_str)
-        self._init_game(
-            expansions=expansions,
-            gamestate=gamestate,
-            turn_color=turn_color,
-            turn_num=turn_num,
-            moves=moves,
-        )
+
+        self._init_new_game(expansions)
+        for move in moves:
+            self.play(move)
+
+        err_msg = None
+        if gamestate != self._state:
+            err_msg = f"Provided game state: '{gamestate.name}' is not correct for moves: {'; '.join(moves)}. It should be: '{self._state.name}'"
+        if turn_color != self._turn_color:
+            err_msg = f"Provided turn color: '{turn_color.name.capitalize()}' is not correct for moves: {'; '.join(moves)}. It should be: '{self._turn_color.name.capitalize()}'"
+        if turn_num != self._turn_num:
+            err_msg = f"Provided turn number: '{turn_num}' is not correct for moves: {'; '.join(moves)}. It should be: '{self._turn_num}'"
+
+        if err_msg is not None:
+            self._init_new_game()
+            raise GameNotPossibleError(err_msg)
 
     def pass_move(self):
         if self.valid_moves():
@@ -148,6 +152,19 @@ class Game:
         raise InvalidAddingPositionError(
             notation.MoveString.build(piece_str, relation, ref_piece_str)
         )
+
+    def _init_new_game(self, expansions: set[notation.ExpansionPieces] = set()):
+        self._state = notation.GameState.NotStarted
+        self._moves = []
+        self._turn_color = _STARTING_COLOR
+        self._turn_num = 1
+        self._hive = Hive()
+        self._moves_provider = logic.MovesProvider(self._hive)
+
+        if not expansions.issubset(self._moves_provider.supported_expansions):
+            raise NotSupportedExpansionPieceError(expansions)
+
+        self._expansions = expansions
 
     def _move(self, piece_str: str, relation: str | None, ref_piece_str: str | None):
         if relation is None:
@@ -211,39 +228,6 @@ class Game:
                 valid_moves_str.add(move_str)
 
         return valid_moves_str
-
-    def _init_game(
-        self,
-        expansions: set[notation.ExpansionPieces],
-        gamestate: notation.GameState,
-        turn_color: notation.PieceColor,
-        turn_num: int,
-        moves: list[str],
-    ):
-        self._state = notation.GameState.NotStarted
-        self._moves = []
-        self._turn_color = _STARTING_COLOR
-        self._turn_num = 1
-        self._hive = Hive()
-        self._moves_provider = logic.MovesProvider(self._hive)
-
-        if not expansions.issubset(self._moves_provider.supported_expansions):
-            raise NotSupportedExpansionPieceError(expansions)
-
-        for move in moves:
-            self.play(move)
-
-        err_msg = None
-        if gamestate != self._state:
-            err_msg = f"Provided game state: '{gamestate.name}' is not correct for moves: {'; '.join(moves)}. It should be: '{self._state.name}'"
-        if turn_color != self._turn_color:
-            err_msg = f"Provided turn color: '{turn_color.name.capitalize()}' is not correct for moves: {'; '.join(moves)}. It should be: '{self._turn_color.name.capitalize()}'"
-        if turn_num != self._turn_num:
-            err_msg = f"Provided turn number: '{turn_num}' is not correct for moves: {'; '.join(moves)}. It should be: '{self._turn_num}'"
-
-        if err_msg is not None:
-            self.new_game()
-            raise GameNotPossibleError(err_msg)
 
     def _move_str(self, piece_str, target_position: tuple[int, int]) -> str:  # type: ignore
         if target_position == self._hive.start_position:
