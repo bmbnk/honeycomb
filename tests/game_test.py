@@ -1,6 +1,11 @@
 import pytest
 
-from hive.engine.game import Game, InvalidMove, NotSupportedExpansionPieceError
+from hive.engine.game import (
+    Game,
+    GameNotPossibleError,
+    InvalidMove,
+    NotSupportedExpansionPieceError,
+)
 from hive.engine.notation import GameState, GameString
 
 
@@ -52,6 +57,31 @@ def test_load_game_with_unsupported_expansions_raises_error(
     game: Game, gamestring: str
 ):
     with pytest.raises(NotSupportedExpansionPieceError):
+        game.load_game(gamestring)
+
+
+@pytest.mark.parametrize(
+    "gamestring",
+    [
+        pytest.param("Base;InProgress;White[1]", id="InProgress_while_NotStarted"),
+        pytest.param(
+            "Base;NotStarted;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+            id="NotStarted_while_InProgress",
+        ),
+        pytest.param(
+            "Base;Draw;White[3];wQ;bQ -wQ;wS1 wQ-;bS1 -bQ;wS2 wQ/;bS2 \\bQ;wG1 wQ\\;bG1 /bQ;wA1 wS1-;bA1 -bS1;wA1 bQ/;bA1 /wQ",
+            id="turn_num_3_while_7",
+        ),
+        pytest.param(
+            "Base;BlackWins;Black[6];wQ;bG1 wQ-;wG1 -wQ;bQ bG1\\;wG2 /wQ;bA1 bG1-;wA1 \\wQ;bQ wQ\\;wG2 wQ/;bA1 /wQ",
+            id="turn_color_black_while_white",
+        ),
+    ],
+)
+def test_load_game_with_not_correct_game_state_raises_error(
+    game: Game, gamestring: str
+):
+    with pytest.raises(GameNotPossibleError):
         game.load_game(gamestring)
 
 
