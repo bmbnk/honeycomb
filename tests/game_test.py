@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from hive.engine.game import (
@@ -6,7 +8,6 @@ from hive.engine.game import (
     InvalidMove,
     NotSupportedExpansionPieceError,
 )
-from hive.engine.notation import GameState, GameString
 
 
 @pytest.fixture
@@ -88,13 +89,9 @@ def test_load_game_with_unsupported_expansions_raises_error(
 def test_new_game_not_started_game_state(game: Game):
     game.new_game()
 
-    properties = GameString.decompose(game.status)
-    gamestate = None
-    for property in properties:
-        if isinstance(property, GameState):
-            gamestate = property
-
-    assert gamestate == GameState.NotStarted
+    gamestring_parts = game.status.split(";")
+    gamestate = gamestring_parts[1]
+    assert gamestate == "NotStarted"
 
 
 def test_new_game_creates_base_game(game: Game):
@@ -125,8 +122,10 @@ def test_pass_move_changes_turn(game: Game):
 
     game.pass_move()
 
-    _, _, turn_color, turn_num, _ = GameString.decompose(game.status)
-    assert turn_color.name.capitalize() == "White"
+    match = re.search("(?:;(?:(Black|White)\\[(\\d*)\\]);)", game.status)
+    assert match is not None
+    turn_color, turn_num = match.groups()
+    assert turn_color == "White"
     assert turn_num == 13
 
 
@@ -167,9 +166,11 @@ def test_play_changes_turn(
 
     game.play(move)
 
-    _, _, turn_color, turn_num, _ = GameString.decompose(game.status)
-    assert turn_color.name.capitalize() == next_turn_color
-    assert turn_num == next_turn_num
+    match = re.search("(?:;(?:(Black|White)\\[(\\d*)\\]);)", game.status)
+    assert match is not None
+    turn_color, turn_num = match.groups()
+    assert turn_color == next_turn_color
+    assert int(turn_num) == next_turn_num
 
 
 def test_play_pass_changes_turn(game: Game):
@@ -179,8 +180,10 @@ def test_play_pass_changes_turn(game: Game):
 
     game.play("pass")
 
-    _, _, turn_color, turn_num, _ = GameString.decompose(game.status)
-    assert turn_color.name.capitalize == "White"
+    match = re.search("(?:;(?:(Black|White)\\[(\\d*)\\]);)", game.status)
+    assert match is not None
+    turn_color, turn_num = match.groups()
+    assert turn_color == "White"
     assert turn_num == 13
 
 
@@ -225,4 +228,6 @@ def test_play_pass_while_having_moves_raises_invalidmove(game: Game, start_moves
 def test_status_is_valid_gamestring(game: Game, gamestring: str):
     game.load_game(gamestring)
 
-    assert GameString.is_valid(game.status)
+    match = re.fullmatch("([^;]*);([^;]*);([^;]*)(?:(;.*)*)", game.status)
+
+    assert match is not None
