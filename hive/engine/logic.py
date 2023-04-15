@@ -13,11 +13,11 @@ class MovesProvider:
     def __init__(self, hive: h.Hive) -> None:
         self._hive = hive
         self._piece_to_moves_generator = {
-            notation.PieceType.ANT: self.ant_move_positions,
-            notation.PieceType.BEE: self.bee_move_positions,
-            notation.PieceType.BEETLE: self.beetle_move_positions,
-            notation.PieceType.GRASSHOPPER: self.grasshopper_move_positions,
-            notation.PieceType.SPIDER: self.spider_move_positions,
+            notation.BasePieces.ANT: self.ant_move_positions,
+            notation.BasePieces.BEE: self.bee_move_positions,
+            notation.BasePieces.BEETLE: self.beetle_move_positions,
+            notation.BasePieces.GRASSHOPPER: self.grasshopper_move_positions,
+            notation.BasePieces.SPIDER: self.spider_move_positions,
         }
 
     @property

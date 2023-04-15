@@ -203,7 +203,7 @@ class Hive:
 
     def is_bee_on_board(self, color: notation.PieceColor) -> bool:
         return notation.PieceString.build(
-            color, notation.PieceType.BEE, 0
+            color, notation.BasePieces.BEE, 0
         ) in self.pieces_on_board_str(color)
 
     def is_position_empty(self, position: tuple[int, int]) -> bool:

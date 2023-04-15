@@ -1,6 +1,5 @@
 import re
 from enum import Enum, auto
-from typing import Optional
 
 from hive.engine import err
 
@@ -42,12 +41,6 @@ class GameState(Enum):
     InProgress = auto()
     NotStarted = auto()
     WhiteWins = auto()
-
-
-class ExpansionPieces(Enum):
-    M = auto()
-    L = auto()
-    P = auto()
 
 
 class PieceColor(Enum):
@@ -94,11 +87,23 @@ PIECE_STR_LEN = 3
 
 
 class PieceType(Enum):
+    @classmethod
+    def has(cls, ptype):
+        return ptype in cls._value2member_map_
+
+
+class BasePieces(PieceType):
     BEE = "Q"
     SPIDER = "S"
     BEETLE = "B"
     GRASSHOPPER = "G"
     ANT = "A"
+
+
+class ExpansionPieces(PieceType):
+    MOSQUITO = "M"
+    LADYBUG = "L"
+    PILLBUG = "P"
 
 
 class MoveString:
@@ -180,7 +185,7 @@ class GameTypeString:
         if match := prog.fullmatch(gametype):
             return set(
                 [
-                    ExpansionPieces[group]
+                    ExpansionPieces(group)
                     for group in match.groups()
                     if group is not None
                 ]
@@ -263,7 +268,7 @@ class PieceString:
         piece_type: PieceType,
         piece_num: int,
     ):
-        if piece_type == PieceType.BEE:
+        if piece_type == BasePieces.BEE:
             return "".join([piece_color.value, piece_type.value])
         return "".join([piece_color.value, piece_type.value, str(piece_num)])
 
@@ -277,7 +282,11 @@ class PieceString:
                 group for group in match.groups() if group is not None
             ]
             color = PieceColor(color_str)
-            type_ = PieceType(type_str)
+            if ExpansionPieces.has(type_str):
+                type_ = ExpansionPieces(type_str)
+            else:
+                type_ = BasePieces(type_str)
+
             if num:
                 return color, type_, int(num[0])
             return color, type_
