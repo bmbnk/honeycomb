@@ -89,8 +89,7 @@ def test_load_game_with_unsupported_expansions_raises_error(
 def test_new_game_not_started_game_state(game: Game):
     game.new_game()
 
-    gamestring_parts = game.status.split(";")
-    gamestate = gamestring_parts[1]
+    gamestate = _gamestate(game.status)
     assert gamestate == "NotStarted"
 
 
@@ -122,9 +121,7 @@ def test_pass_move_changes_turn(game: Game):
 
     game.pass_move()
 
-    match = re.search("(?:;(?:(Black|White)\\[(\\d*)\\]);)", game.status)
-    assert match is not None
-    turn_color, turn_num = match.groups()
+    turn_color, turn_num = _turn_color_and_num(game.status)
     assert turn_color == "White"
     assert turn_num == 13
 
@@ -147,6 +144,41 @@ def test_pass_move_while_having_moves_raises_invalidmove(game: Game, start_moves
 
 
 @pytest.mark.parametrize(
+    ("gamestring", "move"),
+    [
+        pytest.param("Base;NotStarted;White[1]", "wG1", id="not_started"),
+        pytest.param(
+            "Base;InProgress;Black[2];wS1;bG1 -wS1;wA1 wS1/",
+            "bG2 /bG1",
+            id="in_progress",
+        ),
+        pytest.param(
+            "Base;InProgress;Black[6];wQ;bQ -wQ;wS1 wQ-;bS1 -bQ;wS2 wQ/;bS2 \\bQ;wG1 wQ\\;bG1 /bQ;wA1 wS1-;bA1 -bS1;wA1 bQ/",
+            "bA1 /wQ",
+            id="draw",
+        ),
+        pytest.param(
+            "Base;InProgress;Black[5];wQ;bG1 wQ-;wG1 -wQ;bQ bG1\\;wG2 /wQ;bA1 bG1-;wA1 \\wQ;bQ wQ\\;wG2 wQ/",
+            "bA1 /wQ",
+            id="black_wins",
+        ),
+        pytest.param(
+            "Base;InProgress;White[5];wG1;bQ wG1-;wQ /wG1;bG1 bQ-;wA1 -wG1;bG2 bQ\\;wQ /bQ;bA1 bQ/",
+            "wA1 \\bQ",
+            id="white_wins",
+        ),
+    ],
+)
+def test_play_move_appears_in_status_as_last(game: Game, gamestring: str, move: str):
+    game.load_game(gamestring)
+
+    game.play(move)
+
+    last_move = game.status.split(";")[-1]
+    assert last_move == move
+
+
+@pytest.mark.parametrize(
     ("gamestring", "move", "next_turn_color", "next_turn_num"),
     [
         pytest.param("Base;NotStarted;White[1]", "wG1", "Black", 1, id="not_started"),
@@ -155,7 +187,14 @@ def test_pass_move_while_having_moves_raises_invalidmove(game: Game, start_moves
             "bG2 /bG1",
             "White",
             3,
-            id="in_progress",
+            id="in_progress_add_piece",
+        ),
+        pytest.param(
+            "Base;InProgress;White[3];wQ;bQ -wQ;wA1 wQ/;bA1 /bQ",
+            "wA1 wQ-",
+            "Black",
+            3,
+            id="in_progress_move_piece",
         ),
     ],
 )
@@ -166,11 +205,42 @@ def test_play_changes_turn(
 
     game.play(move)
 
-    match = re.search("(?:;(?:(Black|White)\\[(\\d*)\\]);)", game.status)
-    assert match is not None
-    turn_color, turn_num = match.groups()
+    turn_color, turn_num = _turn_color_and_num(game.status)
     assert turn_color == next_turn_color
-    assert int(turn_num) == next_turn_num
+    assert turn_num == next_turn_num
+
+
+@pytest.mark.parametrize(
+    ("gamestring", "move", "next_state"),
+    [
+        pytest.param("Base;NotStarted;White[1]", "wG1", "InProgress", id="in_progress"),
+        pytest.param(
+            "Base;InProgress;Black[6];wQ;bQ -wQ;wS1 wQ-;bS1 -bQ;wS2 wQ/;bS2 \\bQ;wG1 wQ\\;bG1 /bQ;wA1 wS1-;bA1 -bS1;wA1 bQ/",
+            "bA1 /wQ",
+            "Draw",
+            id="draw",
+        ),
+        pytest.param(
+            "Base;InProgress;Black[5];wQ;bG1 wQ-;wG1 -wQ;bQ bG1\\;wG2 /wQ;bA1 bG1-;wA1 \\wQ;bQ wQ\\;wG2 wQ/",
+            "bA1 /wQ",
+            "BlackWins",
+            id="black_wins",
+        ),
+        pytest.param(
+            "Base;InProgress;White[5];wG1;bQ wG1-;wQ /wG1;bG1 bQ-;wA1 -wG1;bG2 bQ\\;wQ /bQ;bA1 bQ/",
+            "wA1 \\bQ",
+            "WhiteWins",
+            id="white_wins",
+        ),
+    ],
+)
+def test_play_changes_state(game: Game, gamestring: str, move: str, next_state: str):
+    game.load_game(gamestring)
+
+    game.play(move)
+
+    gamestate = _gamestate(game.status)
+    assert gamestate == next_state
 
 
 def test_play_pass_changes_turn(game: Game):
@@ -180,9 +250,7 @@ def test_play_pass_changes_turn(game: Game):
 
     game.play("pass")
 
-    match = re.search("(?:;(?:(Black|White)\\[(\\d*)\\]);)", game.status)
-    assert match is not None
-    turn_color, turn_num = match.groups()
+    turn_color, turn_num = _turn_color_and_num(game.status)
     assert turn_color == "White"
     assert turn_num == 13
 
@@ -228,6 +296,22 @@ def test_play_pass_while_having_moves_raises_invalidmove(game: Game, start_moves
 def test_status_is_valid_gamestring(game: Game, gamestring: str):
     game.load_game(gamestring)
 
-    match = re.fullmatch("([^;]*);([^;]*);([^;]*)(?:(;.*)*)", game.status)
+    return _is_valid_gamestring(game.status)
 
+
+def _is_valid_gamestring(gamestring: str):
+    match = re.fullmatch("([^;]*);([^;]*);([^;]*)(?:(;.*)*)", gamestring)
+    return match is not None
+
+
+def _turn_color_and_num(gamestatus: str):
+    match = re.search("(?:;(?:(Black|White)\\[(\\d*)\\]);)", gamestatus)
     assert match is not None
+    turn_color, turn_num = match.groups()
+    return turn_color, int(turn_num)
+
+
+def _gamestate(gamestring: str):
+    gamestring_parts = gamestring.split(";")
+    gamestate = gamestring_parts[1]
+    return gamestate
