@@ -38,13 +38,6 @@ from hive.engine import pieces as p
 class HiveError(err.BaseEngineError):
     pass
 
-
-class NotEmptyPositionError(HiveError):
-    def __init__(self):
-        message = "Provided position is not empty."
-        super().__init__(message)
-
-
 class PieceAlreadyExistsError(HiveError):
     def __init__(self, piece_str):
         self.message = f"Provided piece is already on the board: {piece_str}"
@@ -189,12 +182,11 @@ class Hive:
         """
         Raises:
             PieceAlreadyExistsError: If piece_str is already in the hive.
-            NotEmptyPositionError: If there is already a piece on position
         """
+        assert position not in self.positions()
+
         if piece_str in self.pieces_on_board_str():
             raise PieceAlreadyExistsError(piece_str)
-        if position in self.positions():
-            raise NotEmptyPositionError
 
         if position is None:
             position = self.start_position
