@@ -6,6 +6,7 @@ from hive.engine.game import (
     Game,
     GameNotPossibleError,
     InvalidMove,
+    InvalidPieceColor,
     NotSupportedExpansionPieceError,
 )
 
@@ -100,7 +101,9 @@ def test_new_game_creates_base_game(game: Game):
 
 
 def test_new_game_creates_correct_game(game: Game):
-    game.new_game("Base")
+    gametype = "Base"
+
+    game.new_game(gametype)
 
     assert game.status == "Base;NotStarted;White[1]"
 
@@ -115,10 +118,9 @@ def test_new_game_with_unsupported_expansions_raises_error(game: Game, gametype:
 
 
 def test_pass_move_changes_turn(game: Game):
-    game.load_game(
-        "Base;InProgress;Black[12];wQ;bQ -wQ;wG1 wQ-;bG1 -bQ;wG2 wG1-;bG2 -bG1;wG3 wG2-;bG3 -bG2;wS1 wG3-;bS1 -bG3;wS2 wS1-;bS2 -bS1;wB1 wS2-;bB1 -bS2;wB2 wB1-;bB2 -bB1;wA1 wB2-;bA1 -bB2;wA2 wA1-;bA2 -bA1;wA3 wA2-;bA3 -bA2;wA3 -bA3"
-    )
+    gamestring = "Base;InProgress;Black[12];wQ;bQ -wQ;wG1 wQ-;bG1 -bQ;wG2 wG1-;bG2 -bG1;wG3 wG2-;bG3 -bG2;wS1 wG3-;bS1 -bG3;wS2 wS1-;bS2 -bS1;wB1 wS2-;bB1 -bS2;wB2 wB1-;bB2 -bB1;wA1 wB2-;bA1 -bB2;wA2 wA1-;bA2 -bA1;wA3 wA2-;bA3 -bA2;wA3 -bA3"
 
+    game.load_game(gamestring)
     game.pass_move()
 
     turn_color, turn_num = _turn_color_and_num(game.status)
@@ -135,7 +137,6 @@ def test_pass_move_changes_turn(game: Game):
 )
 def test_pass_move_while_having_moves_raises_invalidmove(game: Game, start_moves):
     game.new_game()
-
     for move in start_moves:
         game.play(move)
 
@@ -171,7 +172,6 @@ def test_pass_move_while_having_moves_raises_invalidmove(game: Game, start_moves
 )
 def test_play_move_appears_in_status_as_last(game: Game, gamestring: str, move: str):
     game.load_game(gamestring)
-
     game.play(move)
 
     last_move = game.status.split(";")[-1]
@@ -202,7 +202,6 @@ def test_play_changes_turn(
     game: Game, gamestring: str, move: str, next_turn_color: str, next_turn_num: int
 ):
     game.load_game(gamestring)
-
     game.play(move)
 
     turn_color, turn_num = _turn_color_and_num(game.status)
@@ -236,18 +235,25 @@ def test_play_changes_turn(
 )
 def test_play_changes_state(game: Game, gamestring: str, move: str, next_state: str):
     game.load_game(gamestring)
-
     game.play(move)
 
     gamestate = _gamestate(game.status)
     assert gamestate == next_state
 
 
-def test_play_pass_changes_turn(game: Game):
-    game.load_game(
-        "Base;InProgress;Black[12];wQ;bQ -wQ;wG1 wQ-;bG1 -bQ;wG2 wG1-;bG2 -bG1;wG3 wG2-;bG3 -bG2;wS1 wG3-;bS1 -bG3;wS2 wS1-;bS2 -bS1;wB1 wS2-;bB1 -bS2;wB2 wB1-;bB2 -bB1;wA1 wB2-;bA1 -bB2;wA2 wA1-;bA2 -bA1;wA3 wA2-;bA3 -bA2;wA3 -bA3"
-    )
+def test_play_invalid_piece_color_raises_error(game: Game):
+    gamestring = "Base;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1"
+    move = "bS1 -wS1"
 
+    game.load_game(gamestring)
+    with pytest.raises(InvalidPieceColor):
+        game.play(move)
+
+
+def test_play_pass_changes_turn(game: Game):
+    gamestring = "Base;InProgress;Black[12];wQ;bQ -wQ;wG1 wQ-;bG1 -bQ;wG2 wG1-;bG2 -bG1;wG3 wG2-;bG3 -bG2;wS1 wG3-;bS1 -bG3;wS2 wS1-;bS2 -bS1;wB1 wS2-;bB1 -bS2;wB2 wB1-;bB2 -bB1;wA1 wB2-;bA1 -bB2;wA2 wA1-;bA2 -bA1;wA3 wA2-;bA3 -bA2;wA3 -bA3"
+
+    game.load_game(gamestring)
     game.play("pass")
 
     turn_color, turn_num = _turn_color_and_num(game.status)
@@ -296,7 +302,7 @@ def test_play_pass_while_having_moves_raises_invalidmove(game: Game, start_moves
 def test_status_is_valid_gamestring(game: Game, gamestring: str):
     game.load_game(gamestring)
 
-    return _is_valid_gamestring(game.status)
+    assert _is_valid_gamestring(game.status)
 
 
 def _is_valid_gamestring(gamestring: str):
