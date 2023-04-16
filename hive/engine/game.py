@@ -107,8 +107,7 @@ class Game:
         Raises:
             InvalidAddingPositionError: If adding position is not valid.
             InvalidMovingPositionError: If moving position is not valid.
-            PieceAlreadyExistsError: If piece_str to add is already in the hive.
-            PieceNotInGameError: If there is no piece to move in the hive with provided piece_str.
+            InvalidPieceColor: If the color of action piece is different then turn color.
         """
         # TODO: Implement better validation logic then calculating all possible moves
 

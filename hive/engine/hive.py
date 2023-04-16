@@ -35,19 +35,6 @@ from hive.engine import err, notation
 from hive.engine import pieces as p
 
 
-class HiveError(err.BaseEngineError):
-    pass
-
-class PieceAlreadyExistsError(HiveError):
-    def __init__(self, piece_str):
-        self.message = f"Provided piece is already on the board: {piece_str}"
-
-
-class PieceNotInGameError(HiveError):
-    def __init__(self, piece_str):
-        self.message = f"Provided piece is not present on the board: {piece_str}"
-
-
 def sum_tuple_elem_wise(a: tuple, b: tuple):
     return tuple([a_i + b_i for a_i, b_i in zip(a, b)])
 
@@ -179,14 +166,8 @@ class Hive:
         return (0, 0)
 
     def add(self, piece_str: str, position: tuple[int, int] | None = None) -> None:
-        """
-        Raises:
-            PieceAlreadyExistsError: If piece_str is already in the hive.
-        """
         assert position not in self.positions()
-
-        if piece_str in self.pieces_on_board_str():
-            raise PieceAlreadyExistsError(piece_str)
+        assert piece_str not in self.pieces_on_board_str()
 
         if position is None:
             position = self.start_position
@@ -209,18 +190,13 @@ class Hive:
         pieces_str = self._pieces[color]["board"]["str"]
         return set(pieces_str)
 
-    def piece(self, piece_str: str) -> p.Piece:
-        """
-        Raises:
-            PieceNotInGameError: If there is no piece on board representing piece_str
-        """
+    def piece(self, piece_str: str) -> p.Piece:  # type: ignore
+        assert piece_str in self.pieces_on_board_str()
 
         color, *_ = notation.PieceString.decompose(piece_str)
         for piece in self.pieces(color):
             if piece.piece_str == piece_str:
                 return copy.deepcopy(piece)
-
-        raise PieceNotInGameError(piece_str)
 
     def pieces(self, color: notation.PieceColor | None = None) -> set[p.Piece]:
         if color is None:
@@ -269,14 +245,9 @@ class Hive:
         return 0
 
     def move(self, piece_str: str, position: tuple[int, int]) -> None:
-        """
-        Raises:
-            PieceNotInGameError: If there is no piece in the hive with provided piece_str.
-        """
-        color, *_ = notation.PieceString.decompose(piece_str)
+        assert piece_str in self.pieces_on_board_str()
 
-        if piece_str not in self.pieces_on_board_str(color):
-            raise PieceNotInGameError(piece_str)
+        color, *_ = notation.PieceString.decompose(piece_str)
 
         for piece in self.pieces(color):
             if piece.piece_str == piece_str:
