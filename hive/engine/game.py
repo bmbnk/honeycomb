@@ -13,29 +13,36 @@ class InvalidMove(GameError):
 
 
 class InvalidPieceColor(InvalidMove):
-    def __init__(self, turn_color):
+    def __init__(self, turn_color: str):
         self.message = (
             f"Invalid piece color. Now it's {turn_color.name.lower()}'s turn."
         )
 
 
+class InvalidExpansionPieceError(GameError):
+    def __init__(self, piece_str: str, gametype: str):
+        self.message = (
+            f"Not valid expansion piece: {piece_str} for the game of type: {gametype}."
+        )
+
+
 class InvalidAddingPositionError(InvalidMove):
-    def __init__(self, position):
+    def __init__(self, position: str):
         self.message = f"Invalid adding position: {position}."
 
 
 class InvalidMovingPositionError(InvalidMove):
-    def __init__(self, position):
+    def __init__(self, position: str):
         self.message = f"Invalid moving position: {position}."
 
 
 class NotSupportedExpansionPieceError(GameError):
-    def __init__(self, expansions):
+    def __init__(self, expansions: str):
         self.message = f"Not supported expansion pieces: {', '.join([e.name for e in expansions])}."
 
 
 class GameNotPossibleError(GameError):
-    def __init__(self, reason):
+    def __init__(self, reason: str):
         self.message = f"Not valid game entry. {reason}"
 
 

@@ -7,10 +7,13 @@ from hive.engine.game import (
     GameNotPossibleError,
     GameNotStartedError,
     InvalidAddingPositionError,
+    InvalidExpansionPieceError,
     InvalidMove,
+    InvalidMovingPositionError,
     InvalidPieceColor,
     NotSupportedExpansionPieceError,
 )
+from hive.engine.notation import InvalidMoveStringError
 
 
 @pytest.fixture
@@ -312,16 +315,99 @@ def test_play_invalid_adding_position_raises_error(
         game.play(move)
 
 
+@pytest.mark.parametrize(
+    ("gamestring", "move"),
+    [
+        pytest.param(
+            "Base;NotStarted;White[1]",
+            "wM",
+            id="Base_M",
+        ),
+        pytest.param(
+            "Base;NotStarted;White[1]",
+            "wL",
+            id="Base_L",
+        ),
+        pytest.param(
+            "Base;NotStarted;White[1]",
+            "wP",
+            id="Base_P",
+        ),
+    ],
+)
+def test_play_not_supported_piece_raises_error(game: Game, gamestring: str, move: str):
+    game.load_game(gamestring)
+    with pytest.raises(InvalidExpansionPieceError):
+        game.play(move)
+
+
+@pytest.mark.parametrize(
+    ("gamestring", "move"),
+    [
+        pytest.param(
+            "Base;NotStarted;White[1]",
+            "wG4",
+            id="wrong_piece_number",
+        ),
+        pytest.param(
+            "Base;NotStarted;White[1]",
+            "wg1",
+            id="low_letter_piece_type",
+        ),
+        pytest.param(
+            "Base;NotStarted;White[1]",
+            "WG1",
+            id="upper_letter_piece_color",
+        ),
+        pytest.param(
+            "Base;NotStarted;White[1]",
+            "G1",
+            id="no_piece_color",
+        ),
+        pytest.param(
+            "Base;NotStarted;White[1]",
+            "wG",
+            id="no_mandatory_piece_number",
+        ),
+        pytest.param(
+            "Base;InProgress;Black[1];wS1",
+            "bA1 .wS1",
+            id="invalid_direction",
+        ),
+        pytest.param(
+            "Base;InProgress;Black[1];wS1",
+            "bA1/wS1",
+            id="no_space",
+        ),
+    ],
+)
 def test_play_invalid_move_string_raises_error(game: Game, gamestring: str, move: str):
-    # TODO
-    pass
+    game.load_game(gamestring)
+    with pytest.raises(InvalidMoveStringError):
+        game.play(move)
 
 
+@pytest.mark.parametrize(
+    ("gamestring", "move"),
+    [
+        pytest.param(
+            "Base;InProgress;Black[2];wS1;bG1 -wS1;wQ wS1/",
+            "bG1 wQ/",
+            id="move_before_adding_bee",
+        ),
+        pytest.param(
+            "Base;InProgress;White[3];wQ;bS1 -wQ;wS1 wQ/;bG1 -bS1",
+            "wS1",
+            id="no_destination",
+        ),
+    ],
+)
 def test_play_invalid_moving_position_raises_error(
     game: Game, gamestring: str, move: str
 ):
-    # TODO
-    pass
+    game.load_game(gamestring)
+    with pytest.raises(InvalidMovingPositionError):
+        game.play(move)
 
 
 @pytest.mark.parametrize(
