@@ -114,10 +114,10 @@ class MoveString:
         prog = re.compile("(\\S+)(?: (\\S+))?")
         if match := prog.fullmatch(move_str):
             piece_str, moving_part = match.groups()
-            if moving_part is None:
-                return piece_str, None, None
-
             if PieceString.is_valid(piece_str):
+                if moving_part is None:
+                    return piece_str, None, None
+
                 relation = "."
                 ref_piece_str = moving_part
 
