@@ -39,6 +39,13 @@ class GameNotPossibleError(GameError):
         self.message = f"Not valid game entry. {reason}"
 
 
+class GameNotStartedError(GameError):
+    def __init__(self):
+        self.message = (
+            'No game has started. Use the "newgame" command to start a new game.'
+        )
+
+
 class Game:
     __slots__ = (
         "_expansions",
@@ -108,6 +115,7 @@ class Game:
             InvalidAddingPositionError: If adding position is not valid.
             InvalidMovingPositionError: If moving position is not valid.
             InvalidPieceColor: If the color of action piece is different then turn color.
+            InvalidMoveStringError: If move string is not valid
         """
         # TODO: Implement better validation logic then calculating all possible moves
 

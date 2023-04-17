@@ -5,6 +5,8 @@ import pytest
 from hive.engine.game import (
     Game,
     GameNotPossibleError,
+    GameNotStartedError,
+    InvalidAddingPositionError,
     InvalidMove,
     InvalidPieceColor,
     NotSupportedExpansionPieceError,
@@ -147,6 +149,32 @@ def test_pass_move_while_having_moves_raises_invalidmove(game: Game, start_moves
 @pytest.mark.parametrize(
     ("gamestring", "move"),
     [
+        pytest.param(
+            "Base;Draw;White[7];wQ;bQ -wQ;wS1 wQ-;bS1 -bQ;wS2 wQ/;bS2 \\bQ;wG1 wQ\\;bG1 /bQ;wA1 wS1-;bA1 -bS1;wA1 bQ/;bA1 /wQ",
+            "wA1 wS1-",
+            id="draw",
+        ),
+        pytest.param(
+            "Base;BlackWins;White[6];wQ;bG1 wQ-;wG1 -wQ;bQ bG1\\;wG2 /wQ;bA1 bG1-;wA1 \\wQ;bQ wQ\\;wG2 wQ/;bA1 /wQ",
+            "wG2 /bA1",
+            id="black_wins",
+        ),
+        pytest.param(
+            "Base;WhiteWins;Black[5];wG1;bQ wG1-;wQ /wG1;bG1 bQ-;wA1 -wG1;bG2 bQ\\;wQ /bQ;bA1 bQ/;wA1 \\bQ",
+            "wA2 /wQ",
+            id="white_wins",
+        ),
+    ],
+)
+def test_play_after_game_end_raises_error(game: Game, gamestring: str, move: str):
+    game.load_game(gamestring)
+    with pytest.raises(GameNotStartedError):
+        game.play(move)
+
+
+@pytest.mark.parametrize(
+    ("gamestring", "move"),
+    [
         pytest.param("Base;NotStarted;White[1]", "wG1", id="not_started"),
         pytest.param(
             "Base;InProgress;Black[2];wS1;bG1 -wS1;wA1 wS1/",
@@ -239,6 +267,74 @@ def test_play_changes_state(game: Game, gamestring: str, move: str, next_state: 
 
     gamestate = _gamestate(game.status)
     assert gamestate == next_state
+
+
+@pytest.mark.parametrize(
+    ("gamestring", "move"),
+    [
+        pytest.param(
+            "Base;NotStarted;White[1]",
+            "wG1 -wA1",
+            id="add_next_to_not_existing_on_first_move",
+        ),
+        pytest.param(
+            "Base;InProgress;Black[2];wS1;bG1 -wS1;wA1 wS1/",
+            "bS1 -wG1",
+            id="add_next_to_not_existing",
+        ),
+        pytest.param(
+            "Base;InProgress;Black[2];wS1;bG1 -wS1;wA1 wS1/",
+            "bG2 wA1-",
+            id="add_explicitly_next_to_opponent",
+        ),
+        pytest.param(
+            "Base;InProgress;Black[2];wS1;bG1 -wS1;wA1 wS1/",
+            "bG2 bG1/",
+            id="add_implicitly_next_to_opponent",
+        ),
+        pytest.param(
+            "Base;InProgress;Black[4];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1;wG1 wS1-;bG3 -bG1;wQ wG1-",
+            "bS1 -bG3",
+            id="fourth_move_not_adding_bee",
+        ),
+        pytest.param(
+            "Base;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+            "wG2 wS1-",
+            id="adding_with_too_big_piece_number",
+        ),
+    ],
+)
+def test_play_invalid_adding_position_raises_error(
+    game: Game, gamestring: str, move: str
+):
+    game.load_game(gamestring)
+    with pytest.raises(InvalidAddingPositionError):
+        game.play(move)
+
+
+def test_play_invalid_move_string_raises_error(game: Game, gamestring: str, move: str):
+    # TODO
+    pass
+
+
+def test_play_invalid_moving_position_raises_error(
+    game: Game, gamestring: str, move: str
+):
+    # TODO
+    pass
+
+
+@pytest.mark.parametrize(
+    "move",
+    [
+        pytest.param("wS1", id="add_piece"),
+        pytest.param("wS1 -wG1", id="add_next_to"),
+        pytest.param("pass", id="pass"),
+    ],
+)
+def test_play_move_without_starting_game_raises_error(game: Game, move: str):
+    with pytest.raises(GameNotStartedError):
+        game.play(move)
 
 
 def test_play_invalid_piece_color_raises_error(game: Game):
