@@ -13,7 +13,7 @@ class InvalidMove(GameError):
 
 
 class InvalidPieceColor(InvalidMove):
-    def __init__(self, turn_color: str):
+    def __init__(self, turn_color: notation.PieceColor):
         self.message = (
             f"Invalid piece color. Now it's {turn_color.name.lower()}'s turn."
         )
@@ -27,17 +27,17 @@ class InvalidExpansionPieceError(GameError):
 
 
 class InvalidAddingPositionError(InvalidMove):
-    def __init__(self, position: str):
-        self.message = f"Invalid adding position: {position}."
+    def __init__(self, move_str: str):
+        self.message = f"Invalid adding position: {move_str}."
 
 
 class InvalidMovingPositionError(InvalidMove):
-    def __init__(self, position: str):
-        self.message = f"Invalid moving position: {position}."
+    def __init__(self, move_str: str):
+        self.message = f"Invalid moving position: {move_str}."
 
 
 class NotSupportedExpansionPieceError(GameError):
-    def __init__(self, expansions: str):
+    def __init__(self, expansions: set[notation.ExpansionPieces]):
         self.message = f"Not supported expansion pieces: {', '.join([e.name for e in expansions])}."
 
 
@@ -220,48 +220,7 @@ class Game:
         self._state = notation.GameState.InProgress
 
     def valid_moves(self) -> set[str]:
-        valid_moves_str = set()
-
-        if not self._hive.is_bee_on_board(self._turn_color) and self._turn_num == 4:
-            adding_positions = self._moves_provider.adding_positions(self._turn_color)
-            bee_str = notation.PieceString.build(
-                self._turn_color, notation.BasePieces.BEE, 0
-            )
-            for pos in adding_positions:
-                move_str = self._move_str(bee_str, pos)
-                valid_moves_str.add(move_str)
-            return valid_moves_str
-
-        for piece in self._hive.pieces(self._turn_color):
-            move_positions = set(self._moves_provider.move_positions(piece))
-            for pos in move_positions:
-                move_str = self._move_str(piece.piece_str, pos)
-                valid_moves_str.add(move_str)
-
-        adding_positions = self._moves_provider.adding_positions(self._turn_color)
-        for pos in adding_positions:
-            for piece_str in self._hive.pieces_in_hand_str(self._turn_color):
-                move_str = self._move_str(piece_str, pos)
-                valid_moves_str.add(move_str)
-
-        return valid_moves_str
-
-    def _move_str(self, piece_str, target_position: tuple[int, int]) -> str:  # type: ignore
-        if target_position == self._hive.start_position:
-            return notation.MoveString.build(piece_str)
-
-        positions_on_board = self._hive.positions()
-        for pos_around in PositionsResolver.positions_around_clockwise(target_position):
-            if pos_around in positions_on_board:
-                for ref_piece in self._hive.pieces():
-                    if ref_piece.position == pos_around:
-                        relation = PositionsResolver.relation(
-                            target_position, pos_around
-                        )
-                        move_str = notation.MoveString.build(
-                            piece_str, relation, ref_piece.piece_str
-                        )
-                        return move_str
+        return self._moves_provider.valid_moves(self._turn_color, self._turn_num)
 
     def _change_turn_color(self):
         if self._turn_color == notation.PieceColor.WHITE:

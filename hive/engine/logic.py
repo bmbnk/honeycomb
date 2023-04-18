@@ -26,6 +26,31 @@ class MovesProvider:
             e for e in notation.ExpansionPieces
         } & self._piece_to_moves_generator.keys()
 
+    def valid_moves(self, turn_color: notation.PieceColor, turn_num: int) -> set[str]:
+        valid_moves_str = set()
+
+        if not self._hive.is_bee_on_board(turn_color) and turn_num == 4:
+            adding_positions = self.adding_positions(turn_color)
+            bee_str = notation.PieceString.build(turn_color, notation.BasePieces.BEE, 0)
+            for pos in adding_positions:
+                move_str = self._move_str(bee_str, pos)
+                valid_moves_str.add(move_str)
+            return valid_moves_str
+
+        for piece in self._hive.pieces(turn_color):
+            move_positions = set(self.move_positions(piece))
+            for pos in move_positions:
+                move_str = self._move_str(piece.piece_str, pos)
+                valid_moves_str.add(move_str)
+
+        adding_positions = self.adding_positions(turn_color)
+        for pos in adding_positions:
+            for piece_str in self._hive.pieces_in_hand_str(turn_color):
+                move_str = self._move_str(piece_str, pos)
+                valid_moves_str.add(move_str)
+
+        return valid_moves_str
+
     def adding_positions(self, color: notation.PieceColor) -> set[tuple[int, int]]:
         player_pos = self._hive.positions(color)
         opponent_pos = self._hive.positions(
@@ -122,6 +147,25 @@ class MovesProvider:
             frontier.put((score, (steps_count + 1, pos)))
 
         return self._hive_search(frontier, visited, occupied, targets, heuristic_target)
+
+    def _move_str(self, piece_str, target_position: tuple[int, int]) -> str:  # type: ignore
+        if target_position == self._hive.start_position:
+            return notation.MoveString.build(piece_str)
+
+        positions_on_board = self._hive.positions()
+        for pos_around in h.PositionsResolver.positions_around_clockwise(
+            target_position
+        ):
+            if pos_around in positions_on_board:
+                for ref_piece in self._hive.pieces():
+                    if ref_piece.position == pos_around:
+                        relation = h.PositionsResolver.relation(
+                            target_position, pos_around
+                        )
+                        move_str = notation.MoveString.build(
+                            piece_str, relation, ref_piece.piece_str
+                        )
+                        return move_str
 
     def _search_heuristic(self, current: tuple[int, int], target: tuple[int, int]):
         return math.sqrt(sum(((t - c) ** 2 for t, c in zip(target, current))))
