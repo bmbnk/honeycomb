@@ -140,7 +140,9 @@ def test_pass_move_changes_turn(game: Game):
         pytest.param(["wS1", "bG1 -wS1", "wA1 wS1/"], id="after_three_moves"),
     ],
 )
-def test_pass_move_while_having_moves_raises_invalidmove(game: Game, start_moves):
+def test_pass_move_while_having_moves_raises_invalidmove(
+    game: Game, start_moves: list[str]
+):
     game.new_game()
     for move in start_moves:
         game.play(move)
@@ -450,7 +452,9 @@ def test_play_pass_changes_turn(game: Game):
         pytest.param(["wS1", "bG1 -wS1", "wA1 wS1/"], id="after_three_moves"),
     ],
 )
-def test_play_pass_while_having_moves_raises_invalidmove(game: Game, start_moves):
+def test_play_pass_while_having_moves_raises_invalidmove(
+    game: Game, start_moves: list[str]
+):
     game.new_game()
 
     for move in start_moves:
@@ -487,9 +491,44 @@ def test_status_is_valid_gamestring(game: Game, gamestring: str):
     assert _is_valid_gamestring(game.status)
 
 
+@pytest.mark.parametrize(
+    ("depth", "expected_leaf_nodes"),
+    [
+        # Precalculated PERFT values
+        (1, 5),
+        (2, 150),
+        (3, 2162),
+        # TODO: Add (4, 27676) later as nodes in this depth where harder to compute by hand and there could be some miscalculations
+    ],
+)
+def test_validmoves_with_perft(game: Game, depth: int, expected_leaf_nodes: int):
+    game.new_game("Base")
+
+    leaf_nodes = _perft(game, depth)
+
+    assert leaf_nodes == expected_leaf_nodes
+
+
 def _is_valid_gamestring(gamestring: str):
     match = re.fullmatch("([^;]*);([^;]*);([^;]*)(?:(;.*)*)", gamestring)
     return match is not None
+
+
+def _perft(game: Game, depth: int) -> int:
+    if depth == 0:
+        return 1
+
+    leaf_nodes = 0
+
+    validmoves = game.valid_moves()
+    for move in validmoves:
+        game.play(move)
+        leaf_nodes += _perft(game, depth - 1)
+        game.undo(to_undo=1)
+
+    if validmoves:
+        return leaf_nodes
+    return 1  # pass move
 
 
 def _turn_color_and_num(gamestatus: str):
