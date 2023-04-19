@@ -127,6 +127,9 @@ class MovesProvider:
         heuristic_target: tuple[int, int],
     ) -> bool:
         """Returns True if found all targets or if targets where empty."""
+        if frontier.empty():
+            return False
+
         _, (steps_count, position) = frontier.get()
         visited.add(position)
 
