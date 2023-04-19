@@ -509,6 +509,40 @@ def test_validmoves_with_perft(game: Game, depth: int, expected_leaf_nodes: int)
     assert leaf_nodes == expected_leaf_nodes
 
 
+@pytest.mark.parametrize(
+    # One move can have multiple move_str representations so moves_str is a list of sets with all possible representations of the move
+    ("gamestring", "piece_str", "moves_str"),
+    [
+        pytest.param(
+            "Base;InProgress;White[4];wS1;bQ -wS1;wQ wS1\\;bA1 \\bQ;wQ wS1-;bA1 wQ-",
+            "wQ",
+            [],
+            id="one_hive",
+        ),
+        pytest.param(
+            "Base;InProgress;White[6];wQ;bQ -wQ;wA1 wQ-;bS1 -bQ;wA1 bS1/;bS1 wA1/;wB1 wQ-;bG1 wS1-;wB1 wQ/;bG2 /bQ",
+            "wQ",
+            [{"wQ bQ\\", "wQ bG2-"}, {"wQ wB1\\"}],
+            id="freedom_to_move",
+        ),
+    ],
+)
+def test_validmoves_return_proper_moving_bee_positions(
+    game: Game, gamestring: str, piece_str: str, moves_str: list[set[str]]
+):
+    game.load_game(gamestring)
+
+    moves = game.valid_moves()
+    bee_moves = {move for move in moves if move.startswith(piece_str)}
+
+    for move_representations in moves_str:
+        valid_bee_move = bee_moves & move_representations
+        assert valid_bee_move
+        bee_moves -= valid_bee_move
+
+    assert not bee_moves
+
+
 def _is_valid_gamestring(gamestring: str):
     match = re.fullmatch("([^;]*);([^;]*);([^;]*)(?:(;.*)*)", gamestring)
     return match is not None
