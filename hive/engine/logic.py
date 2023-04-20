@@ -44,8 +44,9 @@ class MovesProvider:
                 valid_moves_str.add(move_str)
 
         adding_positions = self.adding_positions(turn_color)
+        pieces_str_to_add = self._pieces_str_to_add(turn_color)
         for pos in adding_positions:
-            for piece_str in self._hive.pieces_in_hand_str(turn_color):
+            for piece_str in pieces_str_to_add:
                 move_str = self._move_str(piece_str, pos)
                 valid_moves_str.add(move_str)
 
@@ -172,6 +173,21 @@ class MovesProvider:
                             piece_str, relation, ref_piece.piece_str
                         )
                         return move_str
+
+    def _pieces_str_to_add(self, color: notation.PieceColor) -> set[str]:
+        pieces_in_hand_str = self._hive.pieces_in_hand_str(color)
+        ptype_to_piece_str = {}
+        for piece_str in pieces_in_hand_str:
+            _, ptype, *_ = notation.PieceString.decompose(piece_str)
+            if ptype not in ptype_to_piece_str:
+                ptype_to_piece_str[ptype] = set()
+            ptype_to_piece_str[ptype].add(piece_str)
+
+        pieces_str_to_add = {
+            piece_strs.pop() if len(piece_strs) == 1 else min(piece_strs)
+            for piece_strs in ptype_to_piece_str.values()
+        }
+        return pieces_str_to_add
 
     def _search_heuristic(self, current: tuple[int, int], target: tuple[int, int]):
         return math.sqrt(sum(((t - c) ** 2 for t, c in zip(target, current))))
