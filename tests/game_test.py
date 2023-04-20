@@ -492,6 +492,206 @@ def test_status_is_valid_gamestring(game: Game, gamestring: str):
 
 
 @pytest.mark.parametrize(
+    ("gamestring", "to_undo", "result_gamestate"),
+    [
+        pytest.param("Base;NotStarted;White[1]", 1, "NotStarted", id="NotStarted"),
+        pytest.param(
+            "Base;InProgress;Black[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1;wQ wS1-",
+            10,
+            "NotStarted",
+            id="InProgress_to_NotStarted",
+        ),
+        pytest.param(
+            "Base;Draw;White[7];wQ;bQ -wQ;wS1 wQ-;bS1 -bQ;wS2 wQ/;bS2 \\bQ;wG1 wQ\\;bG1 /bQ;wA1 wS1-;bA1 -bS1;wA1 bQ/;bA1 /wQ",
+            5,
+            "InProgress",
+            id="Draw_to_InProgress",
+        ),
+        pytest.param(
+            "Base;BlackWins;White[6];wQ;bG1 wQ-;wG1 -wQ;bQ bG1\\;wG2 /wQ;bA1 bG1-;wA1 \\wQ;bQ wQ\\;wG2 wQ/;bA1 /wQ",
+            1,
+            "InProgress",
+            id="BlackWins_to_InProgress",
+        ),
+        pytest.param(
+            "Base;WhiteWins;Black[5];wG1;bQ wG1-;wQ /wG1;bG1 bQ-;wA1 -wG1;bG2 bQ\\;wQ /bQ;bA1 bQ/;wA1 \\bQ",
+            4,
+            "InProgress",
+            id="WhiteWins_to_InProgress",
+        ),
+        pytest.param(
+            "Base;BlackWins;White[6];wQ;bG1 wQ-;wG1 -wQ;bQ bG1\\;wG2 /wQ;bA1 bG1-;wA1 \\wQ;bQ wQ\\;wG2 wQ/;bA1 /wQ",
+            100,
+            "NotStarted",
+            id="terminated_to_not_started",
+        ),
+    ],
+)
+def test_undo_correctly_changes_gamestate(
+    game: Game, gamestring: str, to_undo: int, result_gamestate: str
+):
+    game.load_game(gamestring)
+
+    game.undo(to_undo)
+
+    gamestate = _gamestate(game.status)
+    assert gamestate == result_gamestate
+
+
+@pytest.mark.parametrize(
+    ("gamestring", "to_undo", "result_turn_color"),
+    [
+        pytest.param("Base;NotStarted;White[1]", 1, "White", id="not_started"),
+        pytest.param(
+            "Base;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+            1,
+            "Black",
+            id="undo_one",
+        ),
+        pytest.param(
+            "Base;InProgress;Black[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1;wQ wS1-",
+            2,
+            "Black",
+            id="undo_two",
+        ),
+        pytest.param(
+            "Base;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+            3,
+            "Black",
+            id="undo_three",
+        ),
+        pytest.param(
+            "Base;Draw;White[7];wQ;bQ -wQ;wS1 wQ-;bS1 -bQ;wS2 wQ/;bS2 \\bQ;wG1 wQ\\;bG1 /bQ;wA1 wS1-;bA1 -bS1;wA1 bQ/;bA1 /wQ",
+            1,
+            "Black",
+            id="draw",
+        ),
+        pytest.param(
+            "Base;BlackWins;White[6];wQ;bG1 wQ-;wG1 -wQ;bQ bG1\\;wG2 /wQ;bA1 bG1-;wA1 \\wQ;bQ wQ\\;wG2 wQ/;bA1 /wQ",
+            1,
+            "Black",
+            id="black_wins",
+        ),
+        pytest.param(
+            "Base;WhiteWins;Black[5];wG1;bQ wG1-;wQ /wG1;bG1 bQ-;wA1 -wG1;bG2 bQ\\;wQ /bQ;bA1 bQ/;wA1 \\bQ",
+            1,
+            "White",
+            id="white_wins",
+        ),
+    ],
+)
+def test_undo_correctly_changes_turn_color(
+    game: Game, gamestring: str, to_undo: int, result_turn_color: str
+):
+    game.load_game(gamestring)
+
+    game.undo(to_undo)
+
+    turn_color, _ = _turn_color_and_num(game.status)
+    assert turn_color == result_turn_color
+
+
+@pytest.mark.parametrize(
+    ("gamestring", "to_undo", "result_turn_num"),
+    [
+        pytest.param("Base;NotStarted;White[1]", 1, 1, id="not_started"),
+        pytest.param(
+            "Base;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+            1,
+            2,
+            id="undo_one_with_change",
+        ),
+        pytest.param(
+            "Base;InProgress;Black[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1;wQ wS1-",
+            1,
+            3,
+            id="undo_one_no_change",
+        ),
+        pytest.param(
+            "Base;InProgress;Black[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1;wQ wS1-",
+            2,
+            2,
+            id="undo_two",
+        ),
+        pytest.param(
+            "Base;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
+            3,
+            1,
+            id="undo_three",
+        ),
+        pytest.param(
+            "Base;Draw;White[7];wQ;bQ -wQ;wS1 wQ-;bS1 -bQ;wS2 wQ/;bS2 \\bQ;wG1 wQ\\;bG1 /bQ;wA1 wS1-;bA1 -bS1;wA1 bQ/;bA1 /wQ",
+            1,
+            6,
+            id="draw",
+        ),
+        pytest.param(
+            "Base;BlackWins;White[6];wQ;bG1 wQ-;wG1 -wQ;bQ bG1\\;wG2 /wQ;bA1 bG1-;wA1 \\wQ;bQ wQ\\;wG2 wQ/;bA1 /wQ",
+            1,
+            5,
+            id="black_wins",
+        ),
+        pytest.param(
+            "Base;WhiteWins;Black[5];wG1;bQ wG1-;wQ /wG1;bG1 bQ-;wA1 -wG1;bG2 bQ\\;wQ /bQ;bA1 bQ/;wA1 \\bQ",
+            2,
+            4,
+            id="white_wins",
+        ),
+    ],
+)
+def test_undo_correctly_changes_turn_num(
+    game: Game, gamestring: str, to_undo: int, result_turn_num: int
+):
+    game.load_game(gamestring)
+
+    game.undo(to_undo)
+
+    _, turn_num = _turn_color_and_num(game.status)
+    assert turn_num == result_turn_num
+
+
+@pytest.mark.parametrize(
+    ("gamestring", "to_undo", "result_moves"),
+    [
+        pytest.param(
+            "Base;InProgress;Black[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1;wQ wS1-",
+            3,
+            ["wS1", "bG1 -wS1"],
+            id="three_moves",
+        ),
+        pytest.param(
+            "Base;Draw;White[7];wQ;bQ -wQ;wS1 wQ-;bS1 -bQ;wS2 wQ/;bS2 \\bQ;wG1 wQ\\;bG1 /bQ;wA1 wS1-;bA1 -bS1;wA1 bQ/;bA1 /wQ",
+            7,
+            ["wQ", "bQ -wQ", "wS1 wQ-", "bS1 -bQ", "wS2 wQ/"],
+            id="Draw",
+        ),
+        pytest.param(
+            "Base;BlackWins;White[6];wQ;bG1 wQ-;wG1 -wQ;bQ bG1\\;wG2 /wQ;bA1 bG1-;wA1 \\wQ;bQ wQ\\;wG2 wQ/;bA1 /wQ",
+            4,
+            ["wQ", "bG1 wQ-", "wG1 -wQ", "bQ bG1\\", "wG2 /wQ", "bA1 bG1-"],
+            id="BlackWins",
+        ),
+        pytest.param(
+            "Base;WhiteWins;Black[5];wG1;bQ wG1-;wQ /wG1;bG1 bQ-;wA1 -wG1;bG2 bQ\\;wQ /bQ;bA1 bQ/;wA1 \\bQ",
+            3,
+            ["wG1", "bQ wG1-", "wQ /wG1", "bG1 bQ-", "wA1 -wG1", "bG2 bQ\\"],
+            id="WhiteWins",
+        ),
+    ],
+)
+def test_undo_correctly_removes_moves(
+    game: Game, gamestring: str, to_undo: int, result_moves: list[str]
+):
+    game.load_game(gamestring)
+
+    game.undo(to_undo)
+
+    moves = _moves(game.status)
+    print(moves)
+    assert moves == result_moves
+
+
+@pytest.mark.parametrize(
     ("depth", "expected_leaf_nodes"),
     [
         # Precalculated PERFT values
@@ -560,7 +760,7 @@ def test_validmoves_return_proper_moving_ant_positions(
             id="one_hive",
         ),
         pytest.param(
-            "Base;InProgress;White[6];wQ;bQ -wQ;wA1 wQ-;bS1 -bQ;wA1 bS1/;bS1 wA1/;wB1 wQ-;bG1 wS1-;wB1 wQ/;bG2 /bQ",
+            "Base;InProgress;White[6];wQ;bQ -wQ;wA1 wQ-;bS1 -bQ;wA1 bS1/;bS1 wA1/;wB1 wQ-;bG1 bS1-;wB1 wQ/;bG2 /bQ",
             "wQ",
             [{"wQ bQ\\", "wQ bG2-"}, {"wQ wB1\\"}],
             id="freedom_to_move",
@@ -584,6 +784,12 @@ def _gamestate(gamestring: str):
 def _is_valid_gamestring(gamestring: str):
     match = re.fullmatch("([^;]*);([^;]*);([^;]*)(?:(;.*)*)", gamestring)
     return match is not None
+
+
+def _moves(gamestring: str) -> list[str]:
+    gamestring_parts = gamestring.split(";")
+    moves = gamestring_parts[3:]
+    return moves
 
 
 def _perft(game: Game, depth: int) -> int:
@@ -618,8 +824,8 @@ def _test_validmoves_return_proper_moving_piece_positions(
     assert not piece_moves
 
 
-def _turn_color_and_num(gamestatus: str):
-    match = re.search("(?:;(?:(Black|White)\\[(\\d*)\\]);)", gamestatus)
+def _turn_color_and_num(gamestatus: str) -> tuple[str, int]:
+    match = re.search("(?:;(?:(Black|White)\\[(\\d*)\\]))", gamestatus)
     assert match is not None
     turn_color, turn_num = match.groups()
     return turn_color, int(turn_num)
