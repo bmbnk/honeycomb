@@ -180,8 +180,10 @@ class MovesProvider:
         self,
         position: tuple[int, int],
         occupied: set[tuple[int, int]],
-        explored: set[tuple[int, int]] = set(),
+        explored: set[tuple[int, int]] | None = None,
     ) -> Generator[tuple[int, int], None, None]:
+        if explored is None:
+            explored = set()
         explored.add(position)
 
         next_steps = self.bee_move_positions(position, occupied)
@@ -271,9 +273,11 @@ class MovesProvider:
         self,
         position: tuple[int, int],
         occupied: set[tuple[int, int]],
-        explored: set = set(),
+        explored: set[tuple[int, int]] | None = None,
         step_counter: int = 0,
     ) -> Generator[tuple[int, int], None, None]:
+        if explored is None:
+            explored = set()
         explored.add(position)
 
         next_steps = self.bee_move_positions(position, occupied)
