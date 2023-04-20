@@ -70,7 +70,10 @@ class ExpansionPieces(PieceType):
     PILLBUG = "P"
 
 
-def pieces_str(color: PieceColor, expansion_pieces: set[ExpansionPieces] = set()):
+def pieces_str(color: PieceColor, expansion_pieces: set[ExpansionPieces] | None = None):
+    if expansion_pieces is None:
+        expansion_pieces = set()
+
     pieces_str = set()
 
     color_str = color.value

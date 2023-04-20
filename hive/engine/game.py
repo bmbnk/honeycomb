@@ -169,7 +169,9 @@ class Game:
             notation.MoveString.build(piece_str, relation, ref_piece_str)
         )
 
-    def _init_new_game(self, expansions: set[notation.ExpansionPieces] = set()):
+    def _init_new_game(self, expansions: set[notation.ExpansionPieces] | None = None):
+        if expansions is None:
+            expansions = set()
         self._state = notation.GameState.NotStarted
         self._moves = []
         self._turn_color = _STARTING_COLOR

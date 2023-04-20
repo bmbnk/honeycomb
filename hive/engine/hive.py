@@ -145,7 +145,10 @@ class MovesStack:
 class Hive:
     __slots__ = "_pieces", "_moves_stack"
 
-    def __init__(self, expansions: set[notation.ExpansionPieces] = set()):
+    def __init__(self, expansions: set[notation.ExpansionPieces] | None = None):
+        if expansions is None:
+            expansions = set()
+
         self._pieces = {}
         self._moves_stack = MovesStack()
 
