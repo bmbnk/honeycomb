@@ -94,9 +94,9 @@ class PositionsResolver:
     def relation(
         cls, position: tuple[int, int], ref_position: tuple[int, int]
     ) -> str | None:
-        pos_offset = (ref_position[0] - position[0], ref_position[1] - position[1])
+        pos_offset = (position[0] - ref_position[0], position[1] - ref_position[1])
         relations_dict = cls._relation_to_move_offset[
-            "even" if cls.is_row_even(position) else "odd"
+            "even" if cls.is_row_even(ref_position) else "odd"
         ]
 
         assert pos_offset in relations_dict.values()
