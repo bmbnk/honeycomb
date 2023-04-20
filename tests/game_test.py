@@ -514,6 +514,46 @@ def test_validmoves_with_perft(game: Game, depth: int, expected_leaf_nodes: int)
     ("gamestring", "piece_str", "moves_str"),
     [
         pytest.param(
+            "Base;InProgress;Black[3];wQ;bS1 -wQ;wG1 wQ-;bA1 -bS1;wG1 -bA1",
+            "bA1",
+            [],
+            id="one_hive",
+        ),
+        pytest.param(
+            "Base;InProgress;White[5];wG1;bQ -wG1;wG2 wG1\\;bS1 -bQ;wQ /wG2;bS1 -wQ;wA1 wG1-;bA1 \\bQ",
+            "wA1",
+            [
+                {"wA1 wG1/"},
+                {"wA1 bA1-", "wA1 bQ/", "wA1 \\wG1"},
+                {"wA1 bA1/"},
+                {"wA1 \\bA1"},
+                {"wA1 -bA1"},
+                {"wA1 /bA1", "wA1 -bQ"},
+                {"wA1 /bQ", "wA1 \\bS1"},
+                {"wA1 -bS1"},
+                {"wA1 /bS1"},
+                {"wA1 bS1\\", "wA1 /wQ"},
+                {"wA1 wQ\\"},
+                {"wA1 wQ-", "wA1 wG2\\"},
+                {"wA1 wG2-"},
+            ],
+            id="freedom_to_move",
+        ),
+    ],
+)
+def test_validmoves_return_proper_moving_ant_positions(
+    game: Game, gamestring: str, piece_str: str, moves_str: list[set[str]]
+):
+    _test_validmoves_return_proper_moving_piece_positions(
+        game, gamestring, piece_str, moves_str
+    )
+
+
+@pytest.mark.parametrize(
+    # One move can have multiple move_str representations so moves_str is a list of sets with all possible representations of the move
+    ("gamestring", "piece_str", "moves_str"),
+    [
+        pytest.param(
             "Base;InProgress;White[4];wS1;bQ -wS1;wQ wS1\\;bA1 \\bQ;wQ wS1-;bA1 wQ-",
             "wQ",
             [],
@@ -530,17 +570,15 @@ def test_validmoves_with_perft(game: Game, depth: int, expected_leaf_nodes: int)
 def test_validmoves_return_proper_moving_bee_positions(
     game: Game, gamestring: str, piece_str: str, moves_str: list[set[str]]
 ):
-    game.load_game(gamestring)
+    _test_validmoves_return_proper_moving_piece_positions(
+        game, gamestring, piece_str, moves_str
+    )
 
-    moves = game.valid_moves()
-    bee_moves = {move for move in moves if move.startswith(piece_str)}
 
-    for move_representations in moves_str:
-        valid_bee_move = bee_moves & move_representations
-        assert valid_bee_move
-        bee_moves -= valid_bee_move
-
-    assert not bee_moves
+def _gamestate(gamestring: str):
+    gamestring_parts = gamestring.split(";")
+    gamestate = gamestring_parts[1]
+    return gamestate
 
 
 def _is_valid_gamestring(gamestring: str):
@@ -565,14 +603,23 @@ def _perft(game: Game, depth: int) -> int:
     return 1  # pass move
 
 
+def _test_validmoves_return_proper_moving_piece_positions(
+    game: Game, gamestring: str, piece_str: str, moves_str: list[set[str]]
+):
+    game.load_game(gamestring)
+
+    moves = game.valid_moves()
+    piece_moves = {move for move in moves if move.startswith(piece_str)}
+
+    for move_representations in moves_str:
+        assert piece_moves & move_representations
+        piece_moves -= move_representations
+
+    assert not piece_moves
+
+
 def _turn_color_and_num(gamestatus: str):
     match = re.search("(?:;(?:(Black|White)\\[(\\d*)\\]);)", gamestatus)
     assert match is not None
     turn_color, turn_num = match.groups()
     return turn_color, int(turn_num)
-
-
-def _gamestate(gamestring: str):
-    gamestring_parts = gamestring.split(";")
-    gamestate = gamestring_parts[1]
-    return gamestate
