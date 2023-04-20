@@ -12,6 +12,7 @@ from hive.engine.game import (
     InvalidMovingPositionError,
     InvalidPieceColor,
     NotSupportedExpansionPieceError,
+    PassMoveNotAllowedError,
 )
 from hive.engine.notation import InvalidMoveStringError
 
@@ -122,11 +123,11 @@ def test_new_game_with_unsupported_expansions_raises_error(game: Game, gametype:
         game.new_game(gametype)
 
 
-def test_pass_move_changes_turn(game: Game):
+def test_play_pass_move_changes_turn(game: Game):
     gamestring = "Base;InProgress;Black[12];wQ;bQ -wQ;wG1 wQ-;bG1 -bQ;wG2 wG1-;bG2 -bG1;wG3 wG2-;bG3 -bG2;wS1 wG3-;bS1 -bG3;wS2 wS1-;bS2 -bS1;wB1 wS2-;bB1 -bS2;wB2 wB1-;bB2 -bB1;wA1 wB2-;bA1 -bB2;wA2 wA1-;bA2 -bA1;wA3 wA2-;bA3 -bA2;wA3 -bA3"
 
     game.load_game(gamestring)
-    game.pass_move()
+    game.play("pass")
 
     turn_color, turn_num = _turn_color_and_num(game.status)
     assert turn_color == "White"
@@ -140,15 +141,15 @@ def test_pass_move_changes_turn(game: Game):
         pytest.param(["wS1", "bG1 -wS1", "wA1 wS1/"], id="after_three_moves"),
     ],
 )
-def test_pass_move_while_having_moves_raises_invalidmove(
+def test_play_pass_move_while_having_moves_raises_error(
     game: Game, start_moves: list[str]
 ):
     game.new_game()
     for move in start_moves:
         game.play(move)
 
-    with pytest.raises(InvalidMove):
-        game.pass_move()
+    with pytest.raises(PassMoveNotAllowedError):
+        game.play("pass")
 
 
 @pytest.mark.parametrize(

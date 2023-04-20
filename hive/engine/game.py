@@ -53,6 +53,11 @@ class GameNotStartedError(GameError):
         )
 
 
+class PassMoveNotAllowedError(InvalidMove):
+    def __init__(self, validmoves):
+        self.message = f"The pass move is not a valid move if there are possible moves available: {', '.join(validmoves)}."
+
+
 class Game:
     __slots__ = (
         "_expansions",
@@ -80,10 +85,6 @@ class Game:
     def best_move(self):
         pass
 
-    def new_game(self, gametype_str: str = "Base"):
-        expansions = notation.GameTypeString.decompose(gametype_str)
-        self._init_new_game(expansions)
-
     def load_game(self, game_str: str) -> None:
         (
             expansions,
@@ -109,18 +110,16 @@ class Game:
             self._init_new_game()
             raise GameNotPossibleError(err_msg)
 
-    def pass_move(self):
-        if self.valid_moves():
-            raise InvalidMove(
-                "The pass move is not a valid move if there are possible moves available."
-            )
-        self._next_turn()
+    def new_game(self, gametype_str: str = "Base"):
+        expansions = notation.GameTypeString.decompose(gametype_str)
+        self._init_new_game(expansions)
 
     def play(self, move_str: str):
         """
         Raises:
             InvalidAddingPositionError: If adding position is not valid.
             InvalidMovingPositionError: If moving position is not valid.
+            PassMoveNotAllowedError: If pass has played while valid moves existing.
             InvalidPieceColor: If the color of action piece is different then turn color.
             InvalidMoveStringError: If move string is not valid
         """
@@ -134,18 +133,44 @@ class Game:
                 raise InvalidPieceColor(self._turn_color)
 
         if piece_str is None:
-            self.pass_move()
+            self._pass_move()
         elif piece_str in self._hive.pieces_in_hand_str():
             self._add(piece_str, relation, ref_piece_str)
         else:
             self._move(piece_str, relation, ref_piece_str)
 
         self._moves.append(move_str)
+        self._next_turn()
+
+    def undo(self, to_undo: int) -> None:
+        if self._state == notation.GameState.NotStarted or to_undo < 1:
+            return
+
+        self._turn_num -= to_undo // 2
+
+        if to_undo % 2 == 1:
+            if self._turn_color == _STARTING_COLOR:
+                self._turn_num -= 1
+            self._change_turn_color()
+
+        if self._turn_num < 1:
+            self.new_game()
+            return
+
+        self._hive.undo(to_undo)
+        self._moves = self._moves[:-to_undo]
+        self._state = (
+            notation.GameState.InProgress
+            if self._moves
+            else notation.GameState.NotStarted
+        )
+
+    def valid_moves(self) -> set[str]:
+        return self._moves_provider.valid_moves(self._turn_color, self._turn_num)
 
     def _add(self, piece_str: str, relation: str | None, ref_piece_str: str | None):
         if relation is None and not self._hive.pieces_on_board_str():
             self._hive.add(piece_str)
-            self._next_turn()
             return
 
         color, *_ = notation.PieceString.decompose(piece_str)
@@ -162,12 +187,17 @@ class Game:
             adding_positions = self._moves_provider.adding_positions(color)
             if destination in adding_positions:
                 self._hive.add(piece_str, destination)
-                self._next_turn()
                 return
 
         raise InvalidAddingPositionError(
             notation.MoveString.build(piece_str, relation, ref_piece_str)
         )
+
+    def _change_turn_color(self):
+        if self._turn_color == notation.PieceColor.WHITE:
+            self._turn_color = notation.PieceColor.BLACK
+        else:
+            self._turn_color = notation.PieceColor.WHITE
 
     def _init_new_game(self, expansions: set[notation.ExpansionPieces] | None = None):
         if expansions is None:
@@ -197,44 +227,34 @@ class Game:
             )
             if destination in self._moves_provider.move_positions(piece):
                 self._hive.move(piece_str, destination)
-                self._next_turn()
                 return
             raise InvalidMovingPositionError(relation.replace(".", ref_piece_str))
         raise InvalidMovingPositionError(piece_str)
 
-    def undo(self, to_undo: int) -> None:
-        if self._state == notation.GameState.NotStarted or to_undo < 1:
-            return
-
-        self._turn_num -= to_undo // 2
-
-        if to_undo % 2 == 1:
-            if self._turn_color == _STARTING_COLOR:
-                self._turn_num -= 1
-            self._change_turn_color()
-
-        if self._turn_num < 1:
-            self.new_game()
-            return
-
-        self._hive.undo(to_undo)
-        self._moves = self._moves[:-to_undo]
-        self._state = notation.GameState.InProgress
-
-    def valid_moves(self) -> set[str]:
-        return self._moves_provider.valid_moves(self._turn_color, self._turn_num)
-
-    def _change_turn_color(self):
-        if self._turn_color == notation.PieceColor.WHITE:
-            self._turn_color = notation.PieceColor.BLACK
-        else:
-            self._turn_color = notation.PieceColor.WHITE
-
     def _next_turn(self):
-        # TODO: check for the game end first
-        if self._state == notation.GameState.NotStarted:
-            self._state = notation.GameState.InProgress
-
+        self._update_gamestate()
         self._change_turn_color()
         if self._turn_color == _STARTING_COLOR:
             self._turn_num += 1
+
+    def _pass_move(self):
+        validmoves = self.valid_moves()
+        if validmoves:
+            raise PassMoveNotAllowedError(validmoves)
+
+    def _update_gamestate(self):
+        black_bee_surrounded = logic.bee_surrounded(
+            self._hive, notation.PieceColor.BLACK
+        )
+        white_bee_surrounded = logic.bee_surrounded(
+            self._hive, notation.PieceColor.WHITE
+        )
+
+        if black_bee_surrounded and white_bee_surrounded:
+            self._state = notation.GameState.Draw
+        elif white_bee_surrounded:
+            self._state = notation.GameState.BlackWins
+        elif black_bee_surrounded:
+            self._state = notation.GameState.WhiteWins
+        elif self._moves:
+            self._state = notation.GameState.InProgress

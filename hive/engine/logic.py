@@ -7,6 +7,18 @@ from hive.engine import notation
 from hive.engine import pieces as p
 
 
+def bee_surrounded(hive: h.Hive, color: notation.PieceColor) -> bool:
+    bee_piece_str = notation.PieceString.build(color, notation.BasePieces.BEE, 0)
+    if bee_piece_str in hive.pieces_on_board_str(color):
+        bee = hive.piece(bee_piece_str)
+        positions_around = set(
+            h.PositionsResolver.positions_around_clockwise(bee.position)
+        )
+        occupied = hive.positions()
+        return len(positions_around - occupied) == 0
+    return False
+
+
 class MovesProvider:
     __slots__ = "_hive", "_piece_to_moves_generator"
 
@@ -54,11 +66,7 @@ class MovesProvider:
 
     def adding_positions(self, color: notation.PieceColor) -> set[tuple[int, int]]:
         player_pos = self._hive.positions(color)
-        opponent_pos = self._hive.positions(
-            notation.PieceColor.WHITE
-            if color == notation.PieceColor.BLACK
-            else notation.PieceColor.BLACK
-        )
+        opponent_pos = self._hive.positions(_opponent_color(color))
 
         if not player_pos:
             if not opponent_pos:
@@ -306,3 +314,11 @@ class MovesProvider:
                 )
             else:
                 yield pos
+
+
+def _opponent_color(color: notation.PieceColor):
+    return (
+        notation.PieceColor.WHITE
+        if color == notation.PieceColor.BLACK
+        else notation.PieceColor.BLACK
+    )
