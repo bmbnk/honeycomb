@@ -161,7 +161,10 @@ class MovesProvider:
         ):
             if pos_around in positions_on_board:
                 for ref_piece in self._hive.pieces():
-                    if ref_piece.position == pos_around:
+                    if (
+                        ref_piece.position == pos_around
+                        and ref_piece.piece_str != piece_str
+                    ):
                         relation = h.PositionsResolver.relation(
                             target_position, pos_around
                         )
