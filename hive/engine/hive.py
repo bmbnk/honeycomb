@@ -171,11 +171,12 @@ class Hive:
     def add(self, piece_str: str, position: tuple[int, int] | None = None) -> None:
         assert position not in self.positions()
         assert piece_str not in self.pieces_on_board_str()
-
         if position is None:
             position = self.start_position
 
-        self._register_piece(piece_str, position)
+        piece = self._create_new_piece(piece_str, position)
+        self._register_piece(piece)
+        self._moves_stack.push(piece, None, position)
 
     def is_bee_on_board(self, color: notation.PieceColor) -> bool:
         return notation.PieceString.build(
@@ -254,7 +255,9 @@ class Hive:
 
         for piece in self.pieces(color):
             if piece.piece_str == piece_str:
+                start_position = piece.position
                 self._transfer_piece(piece, position)
+                self._moves_stack.push(piece, start_position, position)
                 break
 
     def undo(self, moves_num: int):
@@ -273,6 +276,15 @@ class Hive:
             else:
                 self._transfer_piece(piece, start_position)
 
+    def _create_new_piece(self, piece_str, position: tuple[int, int]) -> p.Piece:
+        new_piece = p.Piece(
+            piece_str=piece_str,
+            position=position,
+            piece_under=None,
+            piece_above=None,
+        )
+        return new_piece
+
     def _get_top_piece_on_position(self, position: tuple[int, int]) -> p.Piece | None:
         assert position in self.positions()
 
@@ -284,21 +296,13 @@ class Hive:
                     piece = piece.piece_above
                 return piece
 
-    def _register_piece(self, piece_str: str, position: tuple[int, int]) -> None:
-        new_piece = p.Piece(
-            piece_str=piece_str,
-            position=position,
-            piece_under=None,
-            piece_above=None,
-        )
-        color, *_ = notation.PieceString.decompose(piece_str)
+    def _register_piece(self, piece: p.Piece) -> None:
+        color, *_ = notation.PieceString.decompose(piece.piece_str)
 
-        self._pieces[color]["hand"]["str"].remove(piece_str)
-        self._pieces[color]["board"]["str"].add(piece_str)
-        self._pieces[color]["board"]["instances"].add(new_piece)
-        self._pieces[color]["board"]["positions"].add(position)
-
-        self._moves_stack.push(new_piece, None, position)
+        self._pieces[color]["hand"]["str"].remove(piece.piece_str)
+        self._pieces[color]["board"]["str"].add(piece.piece_str)
+        self._pieces[color]["board"]["instances"].add(piece)
+        self._pieces[color]["board"]["positions"].add(piece.position)
 
     def _transfer_piece(self, piece: p.Piece, position: tuple[int, int]) -> None:
         if piece.piece_under is not None:
@@ -319,5 +323,3 @@ class Hive:
 
         piece.position = position
         self._pieces[color]["board"]["positions"].add(piece.position)
-
-        self._moves_stack.push(piece, start_position, position)
