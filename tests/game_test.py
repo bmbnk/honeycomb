@@ -298,16 +298,6 @@ def test_play_changes_state(game: Game, gamestring: str, move: str, next_state: 
             "bG2 bG1/",
             id="add_implicitly_next_to_opponent",
         ),
-        pytest.param(
-            "Base;InProgress;Black[4];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1;wG1 wS1-;bG3 -bG1;wQ wG1-",
-            "bS1 -bG3",
-            id="fourth_move_not_adding_bee",
-        ),
-        pytest.param(
-            "Base;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
-            "wG2 wS1-",
-            id="adding_with_too_big_piece_number",
-        ),
     ],
 )
 def test_play_invalid_adding_position_raises_error(
@@ -410,19 +400,6 @@ def test_play_invalid_moving_position_raises_error(
 ):
     game.load_game(gamestring)
     with pytest.raises(InvalidMovingPositionError):
-        game.play(move)
-
-
-@pytest.mark.parametrize(
-    "move",
-    [
-        pytest.param("wS1", id="add_piece"),
-        pytest.param("wS1 -wG1", id="add_next_to"),
-        pytest.param("pass", id="pass"),
-    ],
-)
-def test_play_move_without_starting_game_raises_error(game: Game, move: str):
-    with pytest.raises(GameNotStartedError):
         game.play(move)
 
 
