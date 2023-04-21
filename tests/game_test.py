@@ -309,6 +309,15 @@ def test_play_invalid_adding_position_raises_error(
         game.play(move)
 
 
+def test_play_add_piece_with_bigger_num_then_needed_raises_error(game: Game):
+    gamestring = "Base;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1"
+    move = "wG2 wS1-"
+
+    game.load_game(gamestring)
+    with pytest.raises(InvalidAddingPieceError):
+        game.play(move)
+
+
 def test_play_add_not_bee_while_no_bee_on_board_after_fourth_move_raises_error(
     game: Game,
 ):
