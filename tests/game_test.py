@@ -6,6 +6,7 @@ from hive.engine.game import (
     Game,
     GameNotPossibleError,
     GameTerminatedError,
+    InvalidAddingPieceError,
     InvalidAddingPositionError,
     InvalidExpansionPieceError,
     InvalidMove,
@@ -308,25 +309,14 @@ def test_play_invalid_adding_position_raises_error(
         game.play(move)
 
 
-# @pytest.mark.parametrize(
-#     ("gamestring", "move"),
-#     [
-#         pytest.param(
-#             "Base;InProgress;Black[4];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1;wG1 wS1-;bG3 -bG1;wQ wG1-",
-#             "bS1 -bG3",
-#             id="fourth_move_not_adding_bee",
-#         ),
-#         pytest.param(
-#             "Base;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1",
-#             "wG2 wS1-",
-#             id="adding_with_too_big_piece_number",
-#         ),
-#     ],
-# )
-# def test_play__raises_error(game: Game, gamestring: str, move: str):
-#     game.load_game(gamestring)
-#     with pytest.raises(InvalidAddingPositionError):
-#         game.play(move)
+def test_play_add_not_bee_while_no_bee_on_board_after_fourth_move_raises_error(
+    game: Game,
+):
+    gamestring = "Base;InProgress;Black[4];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1;wG1 wS1-;bG3 -bG1;wQ wG1-"
+    move = "bS1 -bG3"
+    game.load_game(gamestring)
+    with pytest.raises(InvalidAddingPieceError):
+        game.play(move)
 
 
 @pytest.mark.parametrize(
