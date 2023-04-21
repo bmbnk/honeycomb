@@ -27,8 +27,8 @@ class InvalidExpansionPieceError(GameError):
 
 
 class InvalidAddingPieceError(InvalidMove):
-    def __init__(self, piece_str: str, pieces_in_hand_str: set[str]):
-        self.message = f"Invalid piece to add: {piece_str}. List of pieces that can be added: {', '.join([piece_str for piece_str in pieces_in_hand_str])}."
+    def __init__(self, piece_str: str, pieces_to_add: set[str]):
+        self.message = f"Invalid piece to add: {piece_str}. List of pieces that can be added: {', '.join([piece_str for piece_str in pieces_to_add])}."
 
 
 class InvalidAddingPositionError(InvalidMove):
@@ -149,7 +149,11 @@ class Game:
             self._pass_move()
         else:
             color, *_ = notation.PieceString.decompose(piece_str)
-            if piece_str in self._hive.pieces_in_hand_str(color):
+            if piece_str in self._hive.pieces_in_hand_str(
+                color
+            ) and piece_str in self._moves_provider.pieces_str_to_add(
+                self._turn_color, self._turn_num
+            ):
                 self._add(move_str)
             elif piece_str in self._hive.pieces_on_board_str(color):
                 self._move(move_str)
@@ -252,7 +256,10 @@ class Game:
             raise InvalidPieceColor(self._turn_color)
         if piece_str not in self._hive.pieces_in_hand_str(color):
             raise InvalidAddingPieceError(
-                piece_str, self._hive.pieces_in_hand_str(color)
+                piece_str,
+                self._moves_provider.pieces_str_to_add(
+                    self._turn_color, self._turn_num
+                ),
             )
 
     def _move(self, move_str: str):

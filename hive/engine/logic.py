@@ -41,14 +41,6 @@ class MovesProvider:
     def valid_moves(self, turn_color: notation.PieceColor, turn_num: int) -> set[str]:
         valid_moves_str = set()
 
-        if not self._hive.is_bee_on_board(turn_color) and turn_num == 4:
-            adding_positions = self.adding_positions(turn_color)
-            bee_str = notation.PieceString.build(turn_color, notation.BasePieces.BEE, 0)
-            for pos in adding_positions:
-                move_str = self._move_str(bee_str, pos)
-                valid_moves_str.add(move_str)
-            return valid_moves_str
-
         for piece in self._hive.pieces(turn_color):
             move_positions = set(self.move_positions(piece))
             for pos in move_positions:
@@ -56,13 +48,14 @@ class MovesProvider:
                 valid_moves_str.add(move_str)
 
         adding_positions = self.adding_positions(turn_color)
-        pieces_str_to_add = self._pieces_str_to_add(turn_color)
+        pieces_str_to_add = self.pieces_str_to_add(turn_color, turn_num)
         for pos in adding_positions:
             for piece_str in pieces_str_to_add:
                 move_str = self._move_str(piece_str, pos)
                 valid_moves_str.add(move_str)
 
         return valid_moves_str
+
 
     def adding_positions(self, color: notation.PieceColor) -> set[tuple[int, int]]:
         player_pos = self._hive.positions(color)
@@ -105,6 +98,26 @@ class MovesProvider:
         occupied = set(self._hive.positions())
         occupied.remove(piece.position)
         yield from self._piece_to_moves_generator[ptype](piece.position, occupied)
+
+    def pieces_str_to_add(
+        self, turn_color: notation.PieceColor, turn_num: int
+    ) -> set[str]:
+        if not self._hive.is_bee_on_board(turn_color) and turn_num == 4:
+            bee_str = notation.PieceString.build(turn_color, notation.BasePieces.BEE, 0)
+            return {bee_str}
+        pieces_in_hand_str = self._hive.pieces_in_hand_str(turn_color)
+        ptype_to_piece_str = {}
+        for piece_str in pieces_in_hand_str:
+            _, ptype, *_ = notation.PieceString.decompose(piece_str)
+            if ptype not in ptype_to_piece_str:
+                ptype_to_piece_str[ptype] = set()
+            ptype_to_piece_str[ptype].add(piece_str)
+
+        pieces_str_to_add = {
+            piece_strs.pop() if len(piece_strs) == 1 else min(piece_strs)
+            for piece_strs in ptype_to_piece_str.values()
+        }
+        return pieces_str_to_add
 
     def is_onehive_broken(self, piece: p.Piece) -> bool:
         if piece.piece_under is not None:
@@ -181,21 +194,6 @@ class MovesProvider:
                             piece_str, relation, ref_piece.piece_str
                         )
                         return move_str
-
-    def _pieces_str_to_add(self, color: notation.PieceColor) -> set[str]:
-        pieces_in_hand_str = self._hive.pieces_in_hand_str(color)
-        ptype_to_piece_str = {}
-        for piece_str in pieces_in_hand_str:
-            _, ptype, *_ = notation.PieceString.decompose(piece_str)
-            if ptype not in ptype_to_piece_str:
-                ptype_to_piece_str[ptype] = set()
-            ptype_to_piece_str[ptype].add(piece_str)
-
-        pieces_str_to_add = {
-            piece_strs.pop() if len(piece_strs) == 1 else min(piece_strs)
-            for piece_strs in ptype_to_piece_str.values()
-        }
-        return pieces_str_to_add
 
     def _search_heuristic(self, current: tuple[int, int], target: tuple[int, int]):
         return math.sqrt(sum(((t - c) ** 2 for t, c in zip(target, current))))
