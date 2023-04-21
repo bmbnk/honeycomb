@@ -128,7 +128,9 @@ class Game:
         """
         Raises:
             GameTerminatedError: If the game is over.
+            InvalidAddingPieceError: If adding piece from hand that is not allowed.
             InvalidAddingPositionError: If adding position is not valid.
+            InvalidExpansionPieceError: If adding expansion piece that is not valid for the gametype.
             InvalidMovingPositionError: If moving position is not valid.
             InvalidPieceColor: If the color of action piece is different then turn color.
             InvalidMoveStringError: If move string is not valid
