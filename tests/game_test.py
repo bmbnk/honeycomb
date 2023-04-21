@@ -5,7 +5,7 @@ import pytest
 from hive.engine.game import (
     Game,
     GameNotPossibleError,
-    GameNotStartedError,
+    GameTerminatedError,
     InvalidAddingPositionError,
     InvalidExpansionPieceError,
     InvalidMove,
@@ -174,7 +174,7 @@ def test_play_pass_move_while_having_moves_raises_error(
 )
 def test_play_after_game_end_raises_error(game: Game, gamestring: str, move: str):
     game.load_game(gamestring)
-    with pytest.raises(GameNotStartedError):
+    with pytest.raises(GameTerminatedError):
         game.play(move)
 
 

@@ -46,10 +46,10 @@ class GameNotPossibleError(GameError):
         self.message = f"Not valid game entry. {reason}"
 
 
-class GameNotStartedError(GameError):
+class GameTerminatedError(GameError):
     def __init__(self):
         self.message = (
-            'No game has started. Use the "newgame" command to start a new game.'
+            'The game has terminated. Use the "newgame" command to start a new game.'
         )
 
 
@@ -117,15 +117,22 @@ class Game:
     def play(self, move_str: str):
         """
         Raises:
+            GameTerminatedError: If the game is over.
             InvalidAddingPositionError: If adding position is not valid.
             InvalidMovingPositionError: If moving position is not valid.
-            PassMoveNotAllowedError: If pass has played while valid moves existing.
             InvalidPieceColor: If the color of action piece is different then turn color.
             InvalidMoveStringError: If move string is not valid
+            PassMoveNotAllowedError: If pass has played while valid moves existing.
         """
         # TODO: Implement better validation logic then calculating all possible moves
 
         piece_str, relation, ref_piece_str = notation.MoveString.decompose(move_str)
+
+        if self._state not in [
+            notation.GameState.NotStarted,
+            notation.GameState.InProgress,
+        ]:
+            raise GameTerminatedError
 
         if piece_str is not None:
             color, *_ = notation.PieceString.decompose(piece_str)
@@ -166,7 +173,7 @@ class Game:
         )
 
     def valid_moves(self) -> set[str]:
-        return self._moves_provider.valid_moves(self._turn_color, self._turn_num)
+        return set(self._moves_provider.valid_moves(self._turn_color, self._turn_num))
 
     def _add(self, piece_str: str, relation: str | None, ref_piece_str: str | None):
         if relation is None and not self._hive.pieces_on_board_str():
