@@ -111,15 +111,26 @@ class MoveString:
         return f"{piece_str}"
 
     @classmethod
-    def decompose(cls, move_str: str) -> tuple[str | None, str | None, str | None]:
+    def decompose(
+        cls, move_str: str
+    ) -> tuple[None] | tuple[str] | tuple[str, str, str]:
+        """
+        Returns:
+            (None,): If 'pass'
+            (piece_str, relation_str, ref_piece_str): If there is action piece and reference piece
+            (piece_str,): If there is only action piece
+
+        Raises:
+            InvalidMoveStrinError: If move_str is not a valid MoveString
+        """
         if move_str == "pass":
-            return None, None, None
+            return (None,)
         prog = re.compile("(\\S+)(?: (\\S+))?")
         if match := prog.fullmatch(move_str):
             piece_str, moving_part = match.groups()
             if PieceString.is_valid(piece_str):
                 if moving_part is None:
-                    return piece_str, None, None
+                    return (piece_str,)
 
                 relation = "."
                 ref_piece_str = moving_part
@@ -257,7 +268,7 @@ class PieceString:
         piece_color: PieceColor,
         piece_type: PieceType,
         piece_num: int,
-    ):
+    ) -> str:
         if piece_type == BasePieces.BEE:
             return "".join([piece_color.value, piece_type.value])
         return "".join([piece_color.value, piece_type.value, str(piece_num)])

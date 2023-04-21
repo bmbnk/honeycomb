@@ -26,9 +26,19 @@ class InvalidExpansionPieceError(GameError):
         )
 
 
+class InvalidAddingPieceError(InvalidMove):
+    def __init__(self, piece_str: str, pieces_in_hand_str: set[str]):
+        self.message = f"Invalid piece to add: {piece_str}. List of pieces that can be added: {', '.join([piece_str for piece_str in pieces_in_hand_str])}."
+
+
 class InvalidAddingPositionError(InvalidMove):
     def __init__(self, move_str: str):
         self.message = f"Invalid adding position: {move_str}."
+
+
+class InvalidMovingPieceError(InvalidMove):
+    def __init__(self, piece_str: str, pieces_on_board_str: set[str]):
+        self.message = f"Invalid piece to move: {piece_str}. List of pieces that can be moved: {', '.join([piece_str for piece_str in pieces_on_board_str])}."
 
 
 class InvalidMovingPositionError(InvalidMove):
@@ -126,25 +136,25 @@ class Game:
         """
         # TODO: Implement better validation logic then calculating all possible moves
 
-        piece_str, relation, ref_piece_str = notation.MoveString.decompose(move_str)
-
         if self._state not in [
             notation.GameState.NotStarted,
             notation.GameState.InProgress,
         ]:
             raise GameTerminatedError
 
-        if piece_str is not None:
-            color, *_ = notation.PieceString.decompose(piece_str)
-            if color != self._turn_color:
-                raise InvalidPieceColor(self._turn_color)
+        move_str_parts = notation.MoveString.decompose(move_str)
+        piece_str = move_str_parts[0]
 
         if piece_str is None:
             self._pass_move()
-        elif piece_str in self._hive.pieces_in_hand_str():
-            self._add(piece_str, relation, ref_piece_str)
         else:
-            self._move(piece_str, relation, ref_piece_str)
+            color, *_ = notation.PieceString.decompose(piece_str)
+            if piece_str in self._hive.pieces_in_hand_str(color):
+                self._add(move_str)
+            elif piece_str in self._hive.pieces_on_board_str(color):
+                self._move(move_str)
+            else:
+                self._raise_invalid_add_piece_error(piece_str)
 
         self._moves.append(move_str)
         self._next_turn()
@@ -173,24 +183,24 @@ class Game:
         )
 
     def valid_moves(self) -> set[str]:
-        return set(self._moves_provider.valid_moves(self._turn_color, self._turn_num))
+        return self._moves_provider.valid_moves(self._turn_color, self._turn_num)
 
-    def _add(self, piece_str: str, relation: str | None, ref_piece_str: str | None):
-        if relation is None and not self._hive.pieces_on_board_str():
+    def _add(self, move_str: str):
+        move_str_parts = notation.MoveString.decompose(move_str)
+
+        assert move_str_parts[0] is not None
+
+        if len(move_str_parts) == 1 and not self._hive.pieces_on_board_str():
+            piece_str = move_str_parts[0]
             self._hive.add(piece_str)
             return
 
-        color, *_ = notation.PieceString.decompose(piece_str)
+        assert len(move_str_parts) == 3
 
-        if (
-            relation is not None
-            and ref_piece_str is not None
-            and ref_piece_str in self._hive.pieces_on_board_str()
-        ):
-            ref_piece = self._hive.piece(ref_piece_str)
-            destination = PositionsResolver.destination_position(
-                ref_piece.position, relation
-            )
+        piece_str, relation, ref_piece_str = move_str_parts
+        color, *_ = notation.PieceString.decompose(piece_str)
+        if ref_piece_str in self._hive.pieces_on_board_str():
+            destination = self._destination(ref_piece_str, relation)
             adding_positions = self._moves_provider.adding_positions(color)
             if destination in adding_positions:
                 self._hive.add(piece_str, destination)
@@ -205,6 +215,13 @@ class Game:
             self._turn_color = notation.PieceColor.BLACK
         else:
             self._turn_color = notation.PieceColor.WHITE
+
+    def _destination(self, ref_piece_str: str, relation: str):
+        ref_piece = self._hive.piece(ref_piece_str)
+        destination = PositionsResolver.destination_position(
+            ref_piece.position, relation
+        )
+        return destination
 
     def _init_new_game(self, expansions: set[notation.ExpansionPieces] | None = None):
         if expansions is None:
@@ -222,7 +239,28 @@ class Game:
             self._moves_provider = logic.MovesProvider(self._hive)
             raise NotSupportedExpansionPieceError(expansions)
 
-    def _move(self, piece_str: str, relation: str | None, ref_piece_str: str | None):
+    def _raise_invalid_add_piece_error(self, piece_str: str):
+        color, ptype, *_ = notation.PieceString.decompose(piece_str)
+        if (
+            isinstance(ptype, notation.ExpansionPieces)
+            and ptype not in self._expansions
+        ):
+            raise InvalidExpansionPieceError(
+                piece_str, notation.GameTypeString.build(self._expansions)
+            )
+        if color != self._turn_color:
+            raise InvalidPieceColor(self._turn_color)
+        if piece_str not in self._hive.pieces_in_hand_str(color):
+            raise InvalidAddingPieceError(
+                piece_str, self._hive.pieces_in_hand_str(color)
+            )
+
+    def _move(self, move_str: str):
+        move_str_parts = notation.MoveString.decompose(move_str)
+        assert len(move_str_parts) == 3
+
+        piece_str, relation, ref_piece_str = move_str_parts
+
         if relation is None:
             raise InvalidMovingPositionError(piece_str)
 
