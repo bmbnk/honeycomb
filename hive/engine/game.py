@@ -264,24 +264,23 @@ class Game:
 
     def _move(self, move_str: str):
         move_str_parts = notation.MoveString.decompose(move_str)
-        assert len(move_str_parts) == 3
+        if len(move_str_parts) == 3:
+            piece_str, relation, ref_piece_str = move_str_parts
 
-        piece_str, relation, ref_piece_str = move_str_parts
+            if relation is None:
+                raise InvalidMovingPositionError(piece_str)
 
-        if relation is None:
-            raise InvalidMovingPositionError(piece_str)
-
-        if ref_piece_str is not None:
-            piece = self._hive.piece(piece_str)
-            ref_piece = self._hive.piece(ref_piece_str)
-            destination = PositionsResolver.destination_position(
-                ref_piece.position, relation
-            )
-            if destination in self._moves_provider.move_positions(piece):
-                self._hive.move(piece_str, destination)
-                return
-            raise InvalidMovingPositionError(relation.replace(".", ref_piece_str))
-        raise InvalidMovingPositionError(piece_str)
+            if ref_piece_str is not None:
+                piece = self._hive.piece(piece_str)
+                ref_piece = self._hive.piece(ref_piece_str)
+                destination = PositionsResolver.destination_position(
+                    ref_piece.position, relation
+                )
+                if destination in self._moves_provider.move_positions(piece):
+                    self._hive.move(piece_str, destination)
+                    return
+                raise InvalidMovingPositionError(move_str)
+        raise InvalidMovingPositionError(move_str)
 
     def _next_turn(self):
         self._update_gamestate()
