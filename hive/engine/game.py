@@ -254,15 +254,15 @@ class Game:
             raise InvalidExpansionPieceError(
                 piece_str, notation.GameTypeString.build(self._expansions)
             )
+
         if color != self._turn_color:
             raise InvalidPieceColor(self._turn_color)
-        if piece_str not in self._hive.pieces_in_hand_str(color):
-            raise InvalidAddingPieceError(
-                piece_str,
-                self._moves_provider.pieces_str_to_add(
-                    self._turn_color, self._turn_num
-                ),
-            )
+
+        pieces_str_to_add = self._moves_provider.pieces_str_to_add(
+            self._turn_color, self._turn_num
+        )
+        if piece_str not in pieces_str_to_add:
+            raise InvalidAddingPieceError(piece_str, pieces_str_to_add)
 
     def _move(self, move_str: str):
         move_str_parts = notation.MoveString.decompose(move_str)
