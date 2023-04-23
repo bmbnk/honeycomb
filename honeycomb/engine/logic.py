@@ -96,7 +96,7 @@ class MovesProvider:
             return
         occupied = set(self._hive.positions())
         occupied.remove(piece.position)
-        yield from self._piece_to_moves_generator[ptype](piece.position, occupied)
+        yield from self._piece_to_moves_generator[ptype](piece.position, occupied)  # type: ignore
 
     def pieces_str_to_add(
         self, turn_color: notation.PieceColor, turn_num: int

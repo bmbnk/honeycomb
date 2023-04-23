@@ -1,7 +1,7 @@
 from honeycomb.engine import Engine
 
 
-class App:
+class EngineCLI:
     def __init__(self) -> None:
         self.engine = Engine()
 
