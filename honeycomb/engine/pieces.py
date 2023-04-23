@@ -1,4 +1,4 @@
-from hive.engine import notation
+from honeycomb.engine import notation
 
 
 class Piece:

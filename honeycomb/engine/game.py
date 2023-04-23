@@ -1,5 +1,5 @@
-from hive.engine import err, logic, notation
-from hive.engine.hive import Hive, PositionsResolver
+from honeycomb.engine import err, logic, notation
+from honeycomb.engine.hive import Hive, PositionsResolver
 
 _STARTING_COLOR = notation.PieceColor.WHITE
 

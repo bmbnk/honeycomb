@@ -1,10 +1,10 @@
 import time
 from typing import Callable
 
-from hive.engine import err, notation
-from hive.engine.game import Game
+from honeycomb import _version
+from honeycomb.engine import err, notation
+from honeycomb.engine.game import Game
 
-__version__ = "0.1.0"
 MAX_TIME_FORMAT = "%H:%M:%S"
 ENGINE_NAME = "EngineName"
 
@@ -132,7 +132,7 @@ def _bestmove(game: Game, params: str) -> str:
 
 
 def _info() -> str:
-    return f"id {ENGINE_NAME} v{__version__}"
+    return f"id {ENGINE_NAME} v{_version.__version__}"
 
 
 def _newgame(game: Game, params: str) -> str:

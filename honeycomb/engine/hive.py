@@ -31,8 +31,8 @@
 import collections
 import copy
 
-from hive.engine import err, notation
-from hive.engine import pieces as p
+from honeycomb.engine import err, notation
+from honeycomb.engine import pieces as p
 
 
 def sum_tuple_elem_wise(a: tuple, b: tuple):

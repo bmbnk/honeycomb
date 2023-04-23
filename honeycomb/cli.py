@@ -1,4 +1,4 @@
-from hive.engine import Engine
+from honeycomb.engine import Engine
 
 
 class App:

@@ -2,9 +2,9 @@ import math
 import queue
 from typing import Generator
 
-from hive.engine import hive as h
-from hive.engine import notation
-from hive.engine import pieces as p
+from honeycomb.engine import hive as h
+from honeycomb.engine import notation
+from honeycomb.engine import pieces as p
 
 
 def bee_surrounded(hive: h.Hive, color: notation.PieceColor) -> bool:
@@ -55,7 +55,6 @@ class MovesProvider:
                 valid_moves_str.add(move_str)
 
         return valid_moves_str
-
 
     def adding_positions(self, color: notation.PieceColor) -> set[tuple[int, int]]:
         player_pos = self._hive.positions(color)

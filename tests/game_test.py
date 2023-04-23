@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from hive.engine.game import (
+from honeycomb.engine.game import (
     Game,
     GameNotPossibleError,
     GameTerminatedError,
@@ -15,7 +15,7 @@ from hive.engine.game import (
     NotSupportedExpansionPieceError,
     PassMoveNotAllowedError,
 )
-from hive.engine.notation import InvalidMoveStringError
+from honeycomb.engine.notation import InvalidMoveStringError
 
 
 @pytest.fixture
