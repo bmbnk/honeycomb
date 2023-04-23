@@ -20,7 +20,7 @@ setuptools.setup(
     packages=["honeycomb"],
     entry_points={
         "console_scripts": [
-            "honeycomb=honeycomb:__main__",
+            "honeycomb=honeycomb.__main__:main",
         ]
     },
     license="MIT",

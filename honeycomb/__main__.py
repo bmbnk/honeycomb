@@ -1,3 +1,9 @@
 from .cli import EngineCLI
 
-EngineCLI().run()
+
+def main():
+    EngineCLI().run()
+
+
+if __name__ == "__main__":
+    main()
