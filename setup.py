@@ -1,3 +1,5 @@
+import os
+
 import setuptools
 
 with open("README.md", "r") as f:
@@ -6,7 +8,10 @@ with open("README.md", "r") as f:
 with open("honeycomb/_version.py") as f:
     version = f.read()
 
-TEST_REQUIRE = ["pytest>=7.0"]
+with open("requirements-dev.txt") as f:
+    test_requires = [
+        line for line in f.read().splitlines() if line and not line.startswith("#")
+    ]
 
 setuptools.setup(
     name="honeycomb",
@@ -29,6 +34,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    tests_require=TEST_REQUIRE,
+    tests_require=test_requires,
     python_requires=">=3.10",
 )
