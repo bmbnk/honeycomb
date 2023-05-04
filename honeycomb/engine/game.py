@@ -292,7 +292,7 @@ class Game:
 
     def _pass_move(self):
         validmoves = self.valid_moves()
-        if validmoves:
+        if not "pass" in validmoves:
             raise PassMoveNotAllowedError(validmoves)
 
     def _update_gamestate(self):

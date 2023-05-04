@@ -46,8 +46,10 @@ class MovesProvider:
 
         adding_positions = self.adding_positions(turn_color)
         pieces_str_to_add = self.pieces_str_to_add(turn_color, turn_num)
-        move_str = self._move_str(pieces_str_to_add.pop(), adding_positions.pop())
-        return move_str
+        if adding_positions and pieces_str_to_add:
+            move_str = self._move_str(pieces_str_to_add.pop(), adding_positions.pop())
+            return move_str
+        return "pass"
 
     def valid_moves(self, turn_color: notation.PieceColor, turn_num: int) -> set[str]:
         valid_moves_str = set()
@@ -64,6 +66,9 @@ class MovesProvider:
             for piece_str in pieces_str_to_add:
                 move_str = self._move_str(piece_str, pos)
                 valid_moves_str.add(move_str)
+
+        if not valid_moves_str:
+            return {"pass"}
 
         return valid_moves_str
 

@@ -31,6 +31,26 @@ def game() -> Game:
             "Base;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1", id="in_progress"
         ),
         pytest.param(
+            "Base;InProgress;Black[12];wQ;bQ -wQ;wG1 wQ-;bG1 -bQ;wG2 wG1-;bG2 -bG1;wG3 wG2-;bG3 -bG2;wS1 wG3-;bS1 -bG3;wS2 wS1-;bS2 -bS1;wB1 wS2-;bB1 -bS2;wB2 wB1-;bB2 -bB1;wA1 wB2-;bA1 -bB2;wA2 wA1-;bA2 -bA1;wA3 wA2-;bA3 -bA2;wA3 -bA3",
+            id="pass",
+        ),
+    ],
+)
+def test_best_move_returnes_valid_move(game: Game, gamestring: str):
+    game.load_game(gamestring)
+
+    move = game.best_move()
+    game.play(move)
+
+
+@pytest.mark.parametrize(
+    "gamestring",
+    [
+        pytest.param("Base;NotStarted;White[1]", id="not_started"),
+        pytest.param(
+            "Base;InProgress;White[3];wS1;bG1 -wS1;wA1 wS1/;bG2 /bG1", id="in_progress"
+        ),
+        pytest.param(
             "Base;Draw;White[7];wQ;bQ -wQ;wS1 wQ-;bS1 -bQ;wS2 wQ/;bS2 \\bQ;wG1 wQ\\;bG1 /bQ;wA1 wS1-;bA1 -bS1;wA1 bQ/;bA1 /wQ",
             id="draw",
         ),
