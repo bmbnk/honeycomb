@@ -189,7 +189,7 @@ class MovesProvider:
         return self._hive_search(frontier, visited, occupied, targets, heuristic_target)
 
     def _move_str(self, piece_str, target_position: tuple[int, int]) -> str:  # type: ignore
-        if target_position == self._hive.start_position:
+        if not self._hive.positions():
             return notation.MoveString.build(piece_str)
 
         positions_on_board = self._hive.positions()
