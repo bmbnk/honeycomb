@@ -6,7 +6,7 @@ from honeycomb.engine import err, notation
 from honeycomb.engine.game import Game
 
 MAX_TIME_FORMAT = "%H:%M:%S"
-ENGINE_NAME = "EngineName"
+ENGINE_NAME = "honeycomb"
 
 
 class EngineError(err.BaseEngineError):
