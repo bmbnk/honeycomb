@@ -716,7 +716,7 @@ def test_undo_correctly_removes_moves(
         (1, 5),
         (2, 150),
         (3, 2220),
-        # TODO: Add (4, 27676) later as nodes in this depth where harder to compute by hand and there could be some miscalculations
+        (4, 32856),
     ],
 )
 def test_validmoves_with_perft(game: Game, depth: int, expected_leaf_nodes: int):
