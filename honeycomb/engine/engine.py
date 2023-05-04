@@ -31,7 +31,7 @@ class InvalidCommandParametersNumber(EngineError):
 
 
 class Engine:
-    """Provides UHP engine command responses."""
+    """Provides UHP engine API."""
 
     __slots__ = "_cmd_completion_str", "_game", "_cmd_func_mapper"
 
@@ -41,6 +41,7 @@ class Engine:
         self._game = Game()
 
     def execute(self, inp) -> str:
+        """Executes UHP commands and outputs response"""
         return self._response(inp)
 
     def _response(self, inp) -> str:
@@ -182,8 +183,8 @@ def _validmoves(game: Game):
 
 
 def _bestmove_in_depth(game: Game, depth: int) -> str:
-    return ""
+    return game.best_move()
 
 
 def _bestmove_in_time(game: Game, hour: int, min: int, sec: int):
-    return ""
+    return game.best_move()

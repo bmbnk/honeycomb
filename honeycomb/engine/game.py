@@ -92,8 +92,8 @@ class Game:
             moves=self._moves,
         )
 
-    def best_move(self):
-        pass
+    def best_move(self) -> str:
+        return self._moves_provider.random_valid_move(self._turn_color, self._turn_num)
 
     def load_game(self, game_str: str) -> None:
         (

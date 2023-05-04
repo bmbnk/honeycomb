@@ -38,6 +38,17 @@ class MovesProvider:
             e for e in notation.ExpansionPieces
         } & self._piece_to_moves_generator.keys()
 
+    def random_valid_move(self, turn_color: notation.PieceColor, turn_num: int) -> str:
+        for piece in self._hive.pieces(turn_color):
+            for pos in self.move_positions(piece):
+                move_str = self._move_str(piece.piece_str, pos)
+                return move_str
+
+        adding_positions = self.adding_positions(turn_color)
+        pieces_str_to_add = self.pieces_str_to_add(turn_color, turn_num)
+        move_str = self._move_str(pieces_str_to_add.pop(), adding_positions.pop())
+        return move_str
+
     def valid_moves(self, turn_color: notation.PieceColor, turn_num: int) -> set[str]:
         valid_moves_str = set()
 
@@ -238,7 +249,7 @@ class MovesProvider:
 
     def beetle_move_positions(
         self, position: tuple[int, int], occupied: set[tuple[int, int]]
-    ):
+    ) -> Generator[tuple[int, int], None, None]:
         height_under_beetle = self._hive.stack_height(position) - 1
         around_clockwise = h.PositionsResolver.positions_around_clockwise(position)
 
